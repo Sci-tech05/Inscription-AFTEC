@@ -6,6 +6,9 @@ from io import BytesIO
 
 from django.contrib import admin, messages
 from django.contrib.admin import AdminSite
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import GroupAdmin, UserAdmin
+from django.contrib.auth.models import Group
 from django.conf import settings
 from django.db.models import Avg, Count
 from django.db.models.functions import TruncDate
@@ -692,6 +695,8 @@ aftec_admin_site.register(Candidat, CandidatAdmin)
 aftec_admin_site.register(NotesAcademiques)
 aftec_admin_site.register(Documents)
 aftec_admin_site.register(Consentement)
+aftec_admin_site.register(get_user_model(), UserAdmin)
+aftec_admin_site.register(Group, GroupAdmin)
 
 
 @admin.register(StatutCandidat, site=aftec_admin_site)

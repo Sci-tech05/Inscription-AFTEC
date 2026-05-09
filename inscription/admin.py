@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import json
 from datetime import date, timedelta
 from io import BytesIO
 
@@ -628,6 +627,9 @@ class AFTECAdminSite(AdminSite):
             .annotate(total=Count("id"))
             .order_by("jour")
         )
+        by_day_map = {item["jour"]: item["total"] for item in by_day_qs}
+        start_day = date.today() - timedelta(days=6)
+        evolution_days = [start_day + timedelta(days=i) for i in range(7)]
 
         quiz_avg = QuizReponse.objects.aggregate(
             electronique=Avg("score_electronique"),
@@ -640,44 +642,42 @@ class AFTECAdminSite(AdminSite):
 
         top10 = StatutCandidat.objects.select_related("candidat").order_by("-score_global_selection")[:10]
 
-        context["dashboard_data"] = json.dumps(
-            {
-                "total": total,
-                "statuts": {
-                    "labels": ["En attente", "Retenu", "Liste d'attente", "Rejeté"],
-                    "values": [
-                        status_counts.get("EN_ATTENTE", 0),
-                        status_counts.get("RETENU", 0),
-                        status_counts.get("LISTE_ATTENTE", 0),
-                        status_counts.get("REJETE", 0),
-                    ],
-                },
-                "sexe": {
-                    "labels": ["Masculin", "Féminin"],
-                    "values": [sexe_counts.get("M", 0), sexe_counts.get("F", 0)],
-                },
-                "classe": {
-                    "labels": [dict(Candidat.CLASSE_CHOICES).get(key, key) for key in classe_counts.keys()],
-                    "values": list(classe_counts.values()),
-                },
-                "evolution": {
-                    "labels": [str(item["jour"]) for item in by_day_qs],
-                    "values": [item["total"] for item in by_day_qs],
-                },
-                "quiz_avg": {
-                    "labels": ["Électronique", "Mathématiques", "Informatique", "IA", "Entrepreneuriat", "Divers"],
-                    "values": [
-                        round(float(quiz_avg.get("electronique") or 0), 2),
-                        round(float(quiz_avg.get("mathematiques") or 0), 2),
-                        round(float(quiz_avg.get("informatique") or 0), 2),
-                        round(float(quiz_avg.get("ia") or 0), 2),
-                        round(float(quiz_avg.get("entrepreneuriat") or 0), 2),
-                        round(float(quiz_avg.get("divers") or 0), 2),
-                    ],
-                },
-                "top10": [{"nom": item.candidat.nom_complet, "score": item.score_global_selection} for item in top10],
-            }
-        )
+        context["dashboard_data"] = {
+            "total": total,
+            "statuts": {
+                "labels": ["En attente", "Retenu", "Liste d'attente", "Rejete"],
+                "values": [
+                    status_counts.get("EN_ATTENTE", 0),
+                    status_counts.get("RETENU", 0),
+                    status_counts.get("LISTE_ATTENTE", 0),
+                    status_counts.get("REJETE", 0),
+                ],
+            },
+            "sexe": {
+                "labels": ["Masculin", "Feminin"],
+                "values": [sexe_counts.get("M", 0), sexe_counts.get("F", 0)],
+            },
+            "classe": {
+                "labels": [dict(Candidat.CLASSE_CHOICES).get(key, key) for key in classe_counts.keys()],
+                "values": list(classe_counts.values()),
+            },
+            "evolution": {
+                "labels": [d.isoformat() for d in evolution_days],
+                "values": [by_day_map.get(d, 0) for d in evolution_days],
+            },
+            "quiz_avg": {
+                "labels": ["Electronique", "Mathematiques", "Informatique", "IA", "Entrepreneuriat", "Divers"],
+                "values": [
+                    round(float(quiz_avg.get("electronique") or 0), 2),
+                    round(float(quiz_avg.get("mathematiques") or 0), 2),
+                    round(float(quiz_avg.get("informatique") or 0), 2),
+                    round(float(quiz_avg.get("ia") or 0), 2),
+                    round(float(quiz_avg.get("entrepreneuriat") or 0), 2),
+                    round(float(quiz_avg.get("divers") or 0), 2),
+                ],
+            },
+            "top10": [{"nom": item.candidat.nom_complet, "score": item.score_global_selection} for item in top10],
+        }
         context["kcomat"] = settings.KCOMAT_INFO
 
         return context

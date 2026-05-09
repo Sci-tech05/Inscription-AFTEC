@@ -202,9 +202,9 @@
 
     const charts = [
         ['statusChart', 'doughnut', { labels: data.statuts?.labels || [], datasets: [{ data: data.statuts?.values || [], backgroundColor: palette }] }, {}],
-        ['genderChart', 'bar', { labels: data.sexe?.labels || [], datasets: [{ label: 'Répartition sexe', data: data.sexe?.values || [], backgroundColor: ['#2b5b84', '#E94560'] }] }, { scales: { y: { beginAtZero: true } } }],
+        ['genderChart', 'bar', { labels: data.sexe?.labels || [], datasets: [{ label: 'Repartition sexe', data: data.sexe?.values || [], backgroundColor: ['#2b5b84', '#E94560'] }] }, { scales: { y: { beginAtZero: true } } }],
         ['classChart', 'bar', { labels: data.classe?.labels || [], datasets: [{ label: 'Par niveau', data: data.classe?.values || [], backgroundColor: '#F5A623' }] }, { scales: { y: { beginAtZero: true } } }],
-        ['evolutionChart', 'line', { labels: data.evolution?.labels || [], datasets: [{ label: 'Inscriptions / jour', data: data.evolution?.values || [], borderColor: '#0F9B58', fill: false, tension: 0.28 }] }, { scales: { y: { beginAtZero: true } } }],
+        ['evolutionChart', 'bar', { labels: data.evolution?.labels || [], datasets: [{ label: 'Inscriptions / jour', data: data.evolution?.values || [], backgroundColor: 'rgba(15,155,88,0.55)', borderColor: '#0F9B58', borderWidth: 1.2 }] }, { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }],
         ['quizRadarChart', 'bar', {
             labels: data.quiz_avg?.labels || [],
             datasets: [{

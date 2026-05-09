@@ -9,7 +9,7 @@ def env_bool(name, default):
     return value in {'1', 'true', 'yes', 'on'}
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
-DEBUG = env_bool('DEBUG', True)
+DEBUG = env_bool('DEBUG', False)
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
     'inscription-aftec-2026.onrender.com',

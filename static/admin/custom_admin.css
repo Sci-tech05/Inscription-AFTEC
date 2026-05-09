@@ -73,30 +73,6 @@ body {
   font-weight: 700;
 }
 
-.aftec-top-nav {
-  display: flex;
-  gap: 10px;
-  padding: 10px 18px 14px;
-  overflow-x: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.aftec-top-nav a {
-  display: inline-block;
-  color: #fff;
-  text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.aftec-top-nav a:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
 .aftec-crumbs {
   padding: 12px 20px;
   margin: 0;
@@ -116,6 +92,48 @@ body {
 
 #main {
   padding: 18px;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.aftec-side-nav {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--aftec-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 20px rgba(24, 57, 85, 0.07);
+  padding: 12px;
+}
+
+.aftec-side-nav h2 {
+  margin: 2px 4px 8px;
+  color: var(--aftec-ink);
+  font-size: 1rem;
+}
+
+.aftec-side-nav a {
+  color: var(--aftec-ink-soft);
+  text-decoration: none;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+}
+
+.aftec-side-nav a:hover {
+  background: #edf5fc;
+  color: var(--aftec-ink);
+  border-color: #d9e6f1;
+}
+
+#content-start.content {
+  min-width: 0;
 }
 
 #content {
@@ -171,12 +189,13 @@ input, select, textarea {
   padding: 14px 0 24px;
 }
 
-#toggle-nav-sidebar,
-#nav-sidebar {
-  display: none !important;
-}
-
 @media (max-width: 900px) {
+  #main {
+    grid-template-columns: 1fr;
+  }
+  .aftec-side-nav {
+    position: static;
+  }
   .aftec-brand {
     font-size: 1.2rem;
   }

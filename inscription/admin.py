@@ -363,7 +363,7 @@ class AFTECAdminSite(AdminSite):
     index_title = "Tableau de bord AFTEC"
     index_template = "admin/custom_index.html"
     login_template = "admin/custom_login.html"
-    enable_nav_sidebar = False
+    enable_nav_sidebar = True
 
     def each_context(self, request):
         context = super().each_context(request)

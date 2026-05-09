@@ -12,6 +12,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 DEBUG = env_bool('DEBUG', True)
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
+    'inscription-aftec-2026.onrender.com',
     default='127.0.0.1,localhost,testserver',
     cast=lambda value: [host.strip() for host in value.split(',') if host.strip()],
 )

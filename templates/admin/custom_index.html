@@ -1,14 +1,21 @@
-﻿{% extends "admin/index.html" %}
+{% extends "admin/index.html" %}
 {% load i18n %}
 
 {% block coltype %}colM{% endblock %}
 {% block sidebar %}{% endblock %}
-{% block bodyclass %}aftec-dashboard{% endblock %}
-
+{% block content_title %}{% endblock %}
+{% block nav-sidebar %}
+{% if has_permission %}
+  {% include "admin/module_sidebar.html" %}
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <style>
     #content {
+        width: auto;
+    }
+    .dashboard #content {
         width: auto;
     }
     #content-main {
@@ -16,16 +23,8 @@
         float: none;
         margin: 0;
     }
-    .aftec-admin-shell {
-        margin-top: 18px;
-        display: grid;
-        grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.8fr);
-        gap: 20px;
-        width: 100%;
-        align-items: start;
-    }
-    .aftec-admin-shell > * { min-width: 0; }
     .aftec-panel {
+        margin-top: 18px;
         background: #fff;
         border: 1px solid #e4eaf1;
         border-radius: 14px;
@@ -75,51 +74,6 @@
     .aftec-body {
         padding: 16px;
     }
-    .aftec-app {
-        border: 1px solid #e7edf5;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        overflow: hidden;
-    }
-    .aftec-app h3 {
-        margin: 0;
-        padding: 10px 12px;
-        background: #f4f8fc;
-        color: #17354f;
-        font-size: .98rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .03em;
-    }
-    .aftec-model-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: center;
-        padding: 10px 12px;
-        border-top: 1px solid #eef2f7;
-    }
-    .aftec-model-row:first-of-type { border-top: 0; }
-    .aftec-model-name {
-        color: #183650;
-        font-weight: 600;
-        text-decoration: none;
-    }
-    .aftec-actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-    .aftec-actions a {
-        font-size: .82rem;
-        font-weight: 700;
-        text-decoration: none;
-        padding: 3px 8px;
-        border-radius: 999px;
-        border: 1px solid #dce6f3;
-        color: #24527b;
-        background: #f7fbff;
-    }
     .aftec-metrics {
         display: grid;
         grid-template-columns: repeat(3, minmax(160px, 1fr));
@@ -146,6 +100,9 @@
         background: #fff;
         min-width: 0;
     }
+    .aftec-chart-card--wide {
+        grid-column: 1 / -1;
+    }
     .aftec-chart-card h4 {
         margin: 0 0 6px;
         font-size: .9rem;
@@ -169,96 +126,53 @@
         text-align: left;
     }
     .aftec-table th { color: #2d4d6b; }
-    @media (max-width: 1440px) {
-        .aftec-admin-shell { grid-template-columns: minmax(300px, .9fr) minmax(0, 1.5fr); }
-    }
     @media (max-width: 1180px) {
-        .aftec-admin-shell { grid-template-columns: 1fr; }
         .aftec-metrics { grid-template-columns: 1fr 1fr 1fr; }
         .aftec-dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
     }
     @media (max-width: 700px) {
         .aftec-metrics { grid-template-columns: 1fr; }
-        .aftec-model-row { flex-direction: column; align-items: flex-start; }
     }
 </style>
 
-<div class="aftec-admin-shell">
-    <section class="aftec-panel">
-        <header class="aftec-panel-head">
-            <h2>Gestion des modules</h2>
-            <p>Accès rapide aux sections administratives AFTEC.</p>
-        </header>
-        <div class="aftec-body">
-            {% if app_list %}
-                {% for app in app_list %}
-                    <article class="aftec-app">
-                        <h3>{{ app.name }}</h3>
-                        {% for model in app.models %}
-                            <div class="aftec-model-row">
-                                {% if model.admin_url %}
-                                    <a class="aftec-model-name" href="{{ model.admin_url }}">
-                                        {% if model.object_name == "Documents" %}Documents{% elif model.object_name == "NotesAcademiques" %}Notes academiques{% else %}{{ model.name }}{% endif %}
-                                    </a>
-                                {% else %}
-                                    <span class="aftec-model-name">
-                                        {% if model.object_name == "Documents" %}Documents{% elif model.object_name == "NotesAcademiques" %}Notes academiques{% else %}{{ model.name }}{% endif %}
-                                    </span>
-                                {% endif %}
-                                <div class="aftec-actions">
-                                    {% if model.add_url %}<a href="{{ model.add_url }}">Ajouter</a>{% endif %}
-                                    {% if model.admin_url and model.view_only %}<a href="{{ model.admin_url }}">Voir</a>{% endif %}
-                                    {% if model.admin_url and not model.view_only %}<a href="{{ model.admin_url }}">Modifier</a>{% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </article>
-                {% endfor %}
-            {% else %}
-                <p>Aucun module disponible pour votre profil.</p>
-            {% endif %}
+<section class="aftec-panel">
+    <header class="aftec-panel-head">
+        <div class="aftec-panel-head--split">
+            <div>
+                <h2>Tableau de bord AFTEC 2026</h2>
+                <p>{{ kcomat.name }} | <a href="{{ kcomat.site }}" style="color:#fff" target="_blank">{{ kcomat.site }}</a></p>
+            </div>
+            <a class="aftec-export-btn" href="{% url 'admin:retained_candidates_pdf' %}">PDF candidats retenus</a>
         </div>
-    </section>
-
-    <section class="aftec-panel">
-        <header class="aftec-panel-head">
-            <div class="aftec-panel-head--split">
-                <div>
-                    <h2>Tableau de bord AFTEC 2026</h2>
-                    <p>{{ kcomat.name }} | <a href="{{ kcomat.site }}" style="color:#fff" target="_blank">{{ kcomat.site }}</a></p>
-                </div>
-                <a class="aftec-export-btn" href="{% url 'admin:retained_candidates_pdf' %}">PDF candidats retenus</a>
-            </div>
-        </header>
-        <div class="aftec-body">
-            <div class="aftec-metrics">
-                <div class="aftec-metric"><span>Total candidatures</span><strong id="totalCount">0</strong></div>
-                <div class="aftec-metric"><span>Contact</span><strong style="font-size:.95rem">{{ kcomat.phone }}</strong></div>
-                <div class="aftec-metric"><span>Email</span><strong style="font-size:.95rem">{{ kcomat.email }}</strong></div>
-            </div>
-
-            <div class="aftec-dashboard-grid">
-                <div class="aftec-chart-card"><h4>Statuts</h4><canvas id="statusChart"></canvas></div>
-                <div class="aftec-chart-card"><h4>Répartition sexe</h4><canvas id="genderChart"></canvas></div>
-                <div class="aftec-chart-card"><h4>Niveaux</h4><canvas id="classChart"></canvas></div>
-                <div class="aftec-chart-card"><h4>Inscriptions / jour</h4><canvas id="evolutionChart"></canvas></div>
-                <div class="aftec-chart-card"><h4>Moyenne quiz</h4><canvas id="quizRadarChart"></canvas></div>
-            </div>
-
-            <div class="aftec-table-wrap">
-                <table class="aftec-table">
-                    <thead>
-                        <tr>
-                            <th>Candidat</th>
-                            <th>Score global</th>
-                        </tr>
-                    </thead>
-                    <tbody id="topTable"></tbody>
-                </table>
-            </div>
+    </header>
+    <div class="aftec-body">
+        <div class="aftec-metrics">
+            <div class="aftec-metric"><span>Total candidatures</span><strong id="totalCount">0</strong></div>
+            <div class="aftec-metric"><span>Contact</span><strong style="font-size:.95rem">{{ kcomat.phone }}</strong></div>
+            <div class="aftec-metric"><span>Email</span><strong style="font-size:.95rem">{{ kcomat.email }}</strong></div>
         </div>
-    </section>
-</div>
+
+        <div class="aftec-dashboard-grid">
+            <div class="aftec-chart-card"><h4>Statuts</h4><canvas id="statusChart"></canvas></div>
+            <div class="aftec-chart-card"><h4>Répartition sexe</h4><canvas id="genderChart"></canvas></div>
+            <div class="aftec-chart-card"><h4>Niveaux</h4><canvas id="classChart"></canvas></div>
+            <div class="aftec-chart-card"><h4>Inscriptions / jour</h4><canvas id="evolutionChart"></canvas></div>
+            <div class="aftec-chart-card aftec-chart-card--wide"><h4>Moyenne quiz</h4><canvas id="quizRadarChart"></canvas></div>
+        </div>
+
+        <div class="aftec-table-wrap">
+            <table class="aftec-table">
+                <thead>
+                    <tr>
+                        <th>Candidat</th>
+                        <th>Score global</th>
+                    </tr>
+                </thead>
+                <tbody id="topTable"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
 
 {{ dashboard_data|json_script:"dashboard-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

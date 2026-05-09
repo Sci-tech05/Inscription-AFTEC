@@ -399,7 +399,7 @@ class AFTECAdminSite(AdminSite):
             rightMargin=1.1 * cm,
             leftMargin=1.1 * cm,
             topMargin=1.0 * cm,
-            bottomMargin=1.1 * cm,
+            bottomMargin=2.2 * cm,
         )
         styles = getSampleStyleSheet()
         styles.add(
@@ -410,6 +410,7 @@ class AFTECAdminSite(AdminSite):
                 fontName="Helvetica-Bold",
                 fontSize=15.5,
                 leading=18,
+                alignment=1,
             )
         )
         styles.add(
@@ -419,6 +420,7 @@ class AFTECAdminSite(AdminSite):
                 textColor=colors.HexColor("#E8F1FF"),
                 fontSize=9.2,
                 leading=11.5,
+                alignment=1,
             )
         )
         styles.add(
@@ -428,6 +430,7 @@ class AFTECAdminSite(AdminSite):
                 textColor=colors.HexColor("#5C6470"),
                 fontSize=9.2,
                 leading=11.5,
+                alignment=1,
             )
         )
         styles.add(
@@ -455,8 +458,26 @@ class AFTECAdminSite(AdminSite):
 
         logo_aftec = settings.BASE_DIR / "static" / "img" / "logo-aftec.png"
         logo_kcomat = settings.BASE_DIR / "static" / "img" / "logo-kcomat.jpeg"
-        left_logo = _fit_logo(logo_aftec, 3.8, 1.6)
-        right_logo = _fit_logo(logo_kcomat, 4.8, 1.6)
+        left_logo = _fit_logo(logo_aftec, 3.6, 1.6)
+        right_logo = _fit_logo(logo_kcomat, 3.6, 1.6)
+
+        footer_line_1 = (
+            f"Organisation: {settings.KCOMAT_INFO['name']} | IFU: {settings.KCOMAT_INFO['ifu']} | "
+            f"RCCM: {settings.KCOMAT_INFO['rccm']}"
+        )
+        footer_line_2 = (
+            f"Contact officiel: {settings.KCOMAT_INFO['phone']} | {settings.KCOMAT_INFO['email']} | "
+            f"{settings.KCOMAT_INFO['address']}"
+        )
+
+        def _draw_fixed_footer(canvas, _doc):
+            canvas.saveState()
+            canvas.setFont("Helvetica", 9.2)
+            canvas.setFillColor(colors.HexColor("#5C6470"))
+            center_x = A4[0] / 2
+            canvas.drawCentredString(center_x, 1.25 * cm, footer_line_1)
+            canvas.drawCentredString(center_x, 0.86 * cm, footer_line_2)
+            canvas.restoreState()
 
         elements = []
         header_text = [
@@ -465,10 +486,12 @@ class AFTECAdminSite(AdminSite):
             Paragraph(f"Date d'édition: {date.today().strftime('%d/%m/%Y')}", styles["HeaderSubtitle"]),
             Paragraph(f"Total retenus: <b>{retenus.count()}</b>", styles["HeaderSubtitle"]),
         ]
+        header_total_width = A4[0] - doc.leftMargin - doc.rightMargin
+        side_col_width = 4.1 * cm
         header_table = Table(
             [[left_logo, header_text, right_logo]],
-            colWidths=[3.8 * cm, 11.0 * cm, 4.0 * cm],
-            hAlign="LEFT",
+            colWidths=[side_col_width, header_total_width - (2 * side_col_width), side_col_width],
+            hAlign="CENTER",
         )
         header_table.setStyle(
             TableStyle(
@@ -476,6 +499,7 @@ class AFTECAdminSite(AdminSite):
                     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0E2A47")),
                     ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#0A2039")),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 8),
@@ -576,21 +600,8 @@ class AFTECAdminSite(AdminSite):
             )
         )
         elements.append(retenus_table)
-        elements.append(Spacer(1, 0.35 * cm))
-        elements.append(
-            Paragraph(
-                f"Organisation: {settings.KCOMAT_INFO['name']} | IFU: {settings.KCOMAT_INFO['ifu']} | RCCM: {settings.KCOMAT_INFO['rccm']}",
-                styles["BodyMuted"],
-            )
-        )
-        elements.append(
-            Paragraph(
-                f"Contact officiel: {settings.KCOMAT_INFO['phone']} | {settings.KCOMAT_INFO['email']} | {settings.KCOMAT_INFO['address']}",
-                styles["BodyMuted"],
-            )
-        )
 
-        doc.build(elements)
+        doc.build(elements, onFirstPage=_draw_fixed_footer, onLaterPages=_draw_fixed_footer)
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
         response["Content-Disposition"] = "attachment; filename=candidats_retenus_aftec2026.pdf"

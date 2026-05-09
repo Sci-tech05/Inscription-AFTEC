@@ -48,7 +48,11 @@
 {% endif %}
 {% endblock %}
 
-{% block nav-sidebar %}{% endblock %}
+{% block nav-sidebar %}
+{% if has_permission %}
+  {% include "admin/module_sidebar.html" %}
+{% endif %}
+{% endblock %}
 
 {% block footer %}
 <div class="aftec-footer">

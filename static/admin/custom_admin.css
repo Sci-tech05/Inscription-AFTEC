@@ -34,17 +34,17 @@ body {
   gap: 10px;
   color: #fff;
   text-decoration: none;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 1.55rem;
   letter-spacing: 0.01em;
 }
 
 .aftec-brand img {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.95);
-  padding: 4px;
+  padding: 3px;
 }
 
 .aftec-user-tools {
@@ -104,6 +104,160 @@ body {
   border-radius: 14px;
   box-shadow: 0 10px 20px rgba(24, 57, 85, 0.07);
   padding: 18px;
+}
+
+.main {
+  align-items: flex-start;
+  gap: 20px;
+}
+
+body:not(.aftec-dashboard) .toggle-nav-sidebar {
+  display: none;
+}
+
+.aftec-module-nav#nav-sidebar {
+  border: 1px solid #e4eaf1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(13, 41, 67, 0.08);
+  flex: 0 0 min(360px, 32vw);
+  width: min(360px, 32vw);
+  max-height: calc(100vh - 110px);
+  left: 0;
+  margin-left: 0;
+  visibility: visible;
+}
+
+body:not(.aftec-dashboard) .main > #nav-sidebar.aftec-module-nav + .content {
+  max-width: calc(100% - min(360px, 32vw));
+}
+
+.aftec-nav-filter {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+.aftec-module-nav__head {
+  padding: 14px 16px;
+  background: linear-gradient(120deg, #133e64, #2f6a8e);
+  color: #fff;
+}
+
+.aftec-module-nav__head h2 {
+  margin: 0;
+  font-size: 1.16rem;
+  font-weight: 700;
+}
+
+.aftec-module-nav__head p {
+  margin: 4px 0 0;
+  opacity: 0.92;
+  font-size: 0.88rem;
+}
+
+.aftec-module-nav__body {
+  padding: 16px;
+}
+
+.aftec-module-home-link {
+  display: block;
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #dce6f3;
+  background: #f7fbff;
+  color: #1f4f79;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.aftec-module-home-link:hover {
+  filter: brightness(0.98);
+}
+
+.aftec-module-app {
+  border: 1px solid #e7edf5;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.aftec-module-app h3 {
+  margin: 0;
+  padding: 10px 12px;
+  background: #f4f8fc;
+  color: #17354f;
+  font-size: 0.98rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.aftec-module-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-top: 1px solid #eef2f7;
+}
+
+.aftec-module-row:first-of-type {
+  border-top: 0;
+}
+
+.aftec-module-name {
+  color: #183650;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.aftec-module-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.aftec-module-actions a {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #dce6f3;
+  color: #24527b;
+  background: #f7fbff;
+}
+
+.aftec-module-empty {
+  margin: 0;
+  color: #51657c;
+}
+
+.aftec-module-export-btn,
+.aftec-module-export-btn:visited {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(90deg, #f5a623, #e94560);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 10px 14px;
+}
+
+.aftec-module-export-btn:hover,
+.aftec-module-export-btn:focus {
+  color: #fff;
+  text-decoration: none;
+  filter: brightness(1.05);
 }
 
 #content h1 {
@@ -175,7 +329,29 @@ input, select, textarea {
   #main {
     padding: 12px;
   }
+  .main {
+    gap: 12px;
+  }
+  .aftec-module-nav#nav-sidebar {
+    position: static;
+    max-height: none;
+    width: 100%;
+    flex-basis: 100%;
+  }
+  body:not(.aftec-dashboard) .main > #nav-sidebar.aftec-module-nav + .content {
+    max-width: 100%;
+  }
+  .aftec-module-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   #content {
     padding: 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  body:not(.aftec-dashboard) #nav-sidebar.aftec-module-nav {
+    display: block;
   }
 }

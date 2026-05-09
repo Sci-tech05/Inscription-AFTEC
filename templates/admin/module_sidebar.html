@@ -1,0 +1,38 @@
+<nav class="sticky aftec-module-nav" id="nav-sidebar" aria-label="Gestion des modules">
+  <input type="search" id="nav-filter" class="aftec-nav-filter" aria-label="Filtrer les modules">
+  <header class="aftec-module-nav__head">
+    <h2>Gestion des modules</h2>
+    <p>Accès rapide aux sections administratives AFTEC.</p>
+  </header>
+  <div class="aftec-module-nav__body">
+    <a class="aftec-module-home-link" href="{% url 'admin:index' %}">Accueil</a>
+    {% if available_apps %}
+      {% for app in available_apps %}
+        <article class="aftec-module-app">
+          <h3>{{ app.name }}</h3>
+          {% for model in app.models %}
+            <div class="aftec-module-row">
+              {% if model.admin_url %}
+                <a class="aftec-module-name" href="{{ model.admin_url }}">
+                  {% if model.object_name == "Documents" %}Documents{% elif model.object_name == "NotesAcademiques" %}Notes academiques{% else %}{{ model.name }}{% endif %}
+                </a>
+              {% else %}
+                <span class="aftec-module-name">
+                  {% if model.object_name == "Documents" %}Documents{% elif model.object_name == "NotesAcademiques" %}Notes academiques{% else %}{{ model.name }}{% endif %}
+                </span>
+              {% endif %}
+              <div class="aftec-module-actions">
+                {% if model.add_url %}<a href="{{ model.add_url }}">Ajouter</a>{% endif %}
+                {% if model.admin_url and model.view_only %}<a href="{{ model.admin_url }}">Voir</a>{% endif %}
+                {% if model.admin_url and not model.view_only %}<a href="{{ model.admin_url }}">Modifier</a>{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="aftec-module-empty">Aucun module disponible pour votre profil.</p>
+    {% endif %}
+    <a class="aftec-module-export-btn" href="{% url 'admin:retained_candidates_pdf' %}">Télécharger liste des retenus</a>
+  </div>
+</nav>

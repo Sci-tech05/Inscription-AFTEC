@@ -438,6 +438,22 @@ class AFTECAdminSite(AdminSite):
                 leading=10.6,
             )
         )
+        styles.add(
+            ParagraphStyle(
+                name="CellTextBold",
+                parent=styles["CellText"],
+                fontName="Helvetica-Bold",
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="CellTextMuted",
+                parent=styles["CellText"],
+                textColor=colors.HexColor("#4F5F73"),
+                fontSize=8.1,
+                leading=9.6,
+            )
+        )
 
         def _fit_logo(path_obj, max_width_cm, max_height_cm):
             if not path_obj.exists():
@@ -485,21 +501,40 @@ class AFTECAdminSite(AdminSite):
         elements.append(header_table)
         elements.append(Spacer(1, 0.35 * cm))
 
-        table_data = [
-            ["#", "Dossier", "Nom complet", "Niveau", "Quiz", "Score global", "Contact"]
-        ]
+        elements.append(
+            Paragraph(
+                "Classement des candidats retenus",
+                ParagraphStyle(
+                    name="SectionTitleRetenus",
+                    parent=styles["Heading3"],
+                    textColor=colors.HexColor("#163C5B"),
+                    fontName="Helvetica-Bold",
+                    fontSize=10.8,
+                    spaceAfter=6,
+                ),
+            )
+        )
+
+        table_data = [["#", "Dossier", "Nom complet", "Niveau", "Quiz", "Score global", "Contact"]]
         for idx, statut in enumerate(retenus, start=1):
             candidat = statut.candidat
             quiz = getattr(candidat, "quiz", None)
+            dossier = (candidat.numero_dossier or "-").replace("-", "-<br/>", 1)
             table_data.append(
                 [
-                    str(idx),
-                    candidat.numero_dossier,
-                    Paragraph(f"<b>{candidat.nom_complet}</b><br/>{candidat.email}", styles["CellText"]),
-                    candidat.get_classe_niveau_display(),
-                    f"{getattr(quiz, 'score_total', 0)}/30",
-                    f"{statut.score_global_selection:.2f}/100",
-                    candidat.telephone,
+                    Paragraph(str(idx), styles["CellText"]),
+                    Paragraph(f"<b>{dossier}</b>", styles["CellText"]),
+                    Paragraph(
+                        f"<b>{candidat.nom_complet}</b><br/><font color='#4F5F73'>{candidat.email}</font>",
+                        styles["CellText"],
+                    ),
+                    Paragraph(candidat.get_classe_niveau_display(), styles["CellText"]),
+                    Paragraph(f"{getattr(quiz, 'score_total', 0)}/30", styles["CellTextBold"]),
+                    Paragraph(f"{statut.score_global_selection:.2f}/100", styles["CellTextBold"]),
+                    Paragraph(
+                        f"<b>{candidat.telephone}</b><br/><font color='#4F5F73'>{candidat.commune_residence}</font>",
+                        styles["CellText"],
+                    ),
                 ]
             )
 
@@ -518,7 +553,7 @@ class AFTECAdminSite(AdminSite):
 
         retenus_table = Table(
             table_data,
-            colWidths=[0.8 * cm, 2.3 * cm, 5.0 * cm, 2.4 * cm, 1.8 * cm, 2.5 * cm, 4.0 * cm],
+            colWidths=[0.8 * cm, 2.2 * cm, 4.9 * cm, 2.1 * cm, 1.6 * cm, 2.2 * cm, 4.0 * cm],
             repeatRows=1,
             hAlign="LEFT",
         )
@@ -528,19 +563,22 @@ class AFTECAdminSite(AdminSite):
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#163C5B")),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 8.7),
+                    ("FONTSIZE", (0, 0), (-1, 0), 8.8),
                     ("ALIGN", (0, 0), (1, -1), "CENTER"),
                     ("ALIGN", (3, 1), (5, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+                    ("VALIGN", (0, 1), (-1, -1), "TOP"),
                     ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#F8FAFD"), colors.HexColor("#EEF3FA")]),
                     ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#1F2A37")),
                     ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                    ("FONTSIZE", (0, 1), (-1, -1), 8.5),
+                    ("FONTSIZE", (0, 1), (-1, -1), 8.4),
                     ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D4DDE9")),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, 0), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 7),
+                    ("TOPPADDING", (0, 1), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 1), (-1, -1), 7),
                 ]
             )
         )

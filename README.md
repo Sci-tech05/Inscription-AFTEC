@@ -19,30 +19,6 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-## Configuration `.env`
-Un fichier `.env` est attendu à la racine du projet (même niveau que `manage.py`).
-
-Variables importantes :
-```env
-SECRET_KEY=django-insecure-change-me-in-production
-DEBUG=True
-ALLOWED_HOSTS=127.0.0.1,localhost,testserver
-
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_USE_SSL=False
-EMAIL_HOST_USER=kcomat0@gmail.com
-EMAIL_HOST_PASSWORD=
-EMAIL_TIMEOUT=20
-DEFAULT_FROM_EMAIL=KcoMat <kcomat0@gmail.com>
-```
-
-Notes Gmail (si utilisé) :
-- Activez la validation en 2 étapes.
-- Utilisez un mot de passe d'application Gmail dans `EMAIL_HOST_PASSWORD`.
-
 ## Fonctionnalités principales
 - Landing page AFTEC 2026.
 - Formulaire d'inscription en 6 étapes avec validations métier.
@@ -66,4 +42,5 @@ Notes Gmail (si utilisé) :
 - `inscription/fixtures/quiz_questions.json` : banque de questions
 - `static/` : CSS/JS/images
 - `media/` : documents candidats
-- `templates/admin/custom_index.html` : dashboard admin personnalisé
+- `templates/admin/custom_index.html` : dashboard admin personnalisé
+

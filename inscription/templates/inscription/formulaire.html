@@ -1,0 +1,146 @@
+{% extends 'inscription/base.html' %}
+
+{% block title %}AFTEC 2026 | Inscription{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="section-title mb-4" data-aos="fade-up">
+            <h2>Formulaire d'inscription AFTEC 2026</h2>
+            <p>Complétez les 6 étapes pour soumettre votre candidature.</p>
+        </div>
+
+        <div class="progress-steps mb-4" data-aos="fade-up">
+            <div class="d-flex justify-content-between small fw-semibold">
+                <span>Étape <span id="currentStepLabel">1</span>/6</span>
+                <span id="progressPercent">16%</span>
+            </div>
+            <div class="progress mt-2" role="progressbar" aria-label="Progression inscription" aria-valuemin="0" aria-valuemax="100">
+                <div id="progressBar" class="progress-bar bg-success" style="width:16%"></div>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="inscriptionForm" class="glass-card p-4">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div id="eligibilityBanner" class="alert alert-danger d-none"></div>
+            <div id="minorAlert" class="alert alert-warning d-none">Vous êtes mineur(e) : une autorisation parentale sera requise.</div>
+            <div id="communeWarning" class="alert alert-info d-none"></div>
+
+            <div class="step-pane active" data-step="1">
+                <h4>Étape 1 — Consentements</h4>
+                <p class="text-muted">Veuillez lire et accepter les engagements AFTEC.</p>
+                <div class="mb-2 form-check">{{ form.consent_donnees_personnelles }} {{ form.consent_donnees_personnelles.label_tag }}</div>
+                <div class="mb-2 form-check">{{ form.consent_selection }} {{ form.consent_selection.label_tag }}</div>
+                <div class="mb-2 form-check">{{ form.consent_reglement }} {{ form.consent_reglement.label_tag }}</div>
+                <div class="mb-2 form-check">{{ form.consent_photos_videos }} {{ form.consent_photos_videos.label_tag }}</div>
+                <div class="mb-2 form-check">{{ form.consent_engagement_presence }} {{ form.consent_engagement_presence.label_tag }}</div>
+                <div id="parentConsentWrap" class="mb-2 form-check d-none">{{ form.consent_autorisation_parentale_declaree }} {{ form.consent_autorisation_parentale_declaree.label_tag }}</div>
+                {% for field in form %}
+                    {% if 'consent_' in field.name and field.errors %}
+                        <div class="text-danger small">{{ field.errors|join:', ' }}</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="step-pane" data-step="2">
+                <h4>Étape 2 — Informations personnelles</h4>
+                <div class="row g-3">
+                    <div class="col-md-6">{{ form.nom.label_tag }}{{ form.nom }}{{ form.nom.errors }}</div>
+                    <div class="col-md-6">{{ form.prenom.label_tag }}{{ form.prenom }}{{ form.prenom.errors }}</div>
+                    <div class="col-md-4">{{ form.date_naissance.label_tag }}{{ form.date_naissance }}{{ form.date_naissance.errors }}</div>
+                    <div class="col-md-4">{{ form.sexe.label_tag }}{{ form.sexe }}{{ form.sexe.errors }}</div>
+                    <div class="col-md-4">{{ form.telephone.label_tag }}{{ form.telephone }}{{ form.telephone.errors }}</div>
+                    <div class="col-md-6">{{ form.email.label_tag }}{{ form.email }}{{ form.email.errors }}</div>
+                    <div class="col-md-6">{{ form.commune_residence.label_tag }}{{ form.commune_residence }}{{ form.commune_residence.errors }}</div>
+                    <div class="col-md-8">{{ form.etablissement.label_tag }}{{ form.etablissement }}{{ form.etablissement.errors }}</div>
+                    <div class="col-md-4">{{ form.classe_niveau.label_tag }}{{ form.classe_niveau }}{{ form.classe_niveau.errors }}</div>
+                    <div class="col-12">{{ form.filiere.label_tag }}{{ form.filiere }}{{ form.filiere.errors }}</div>
+                </div>
+            </div>
+
+            <div class="step-pane" data-step="3">
+                <h4>Étape 3 — Parcours académique & moyennes</h4>
+                <p class="text-muted">La sélection tient compte de vos résultats académiques.</p>
+                <div class="row g-3">
+                    <div class="col-md-6 score-field">{{ form.moyenne_generale_an1.label_tag }}{{ form.moyenne_generale_an1 }}{{ form.moyenne_generale_an1.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field">{{ form.moyenne_generale_an2.label_tag }}{{ form.moyenne_generale_an2 }}{{ form.moyenne_generale_an2.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_maths_an1.label_tag }}{{ form.moyenne_maths_an1 }}{{ form.moyenne_maths_an1.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_maths_an2.label_tag }}{{ form.moyenne_maths_an2 }}{{ form.moyenne_maths_an2.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_physique_an1.label_tag }}{{ form.moyenne_physique_an1 }}{{ form.moyenne_physique_an1.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_physique_an2.label_tag }}{{ form.moyenne_physique_an2 }}{{ form.moyenne_physique_an2.errors }}<div class="score-meter"></div></div>
+                    <div class="col-12">{{ form.appreciation_generale.label_tag }}{{ form.appreciation_generale }}{{ form.appreciation_generale.errors }}</div>
+                </div>
+            </div>
+
+            <div class="step-pane" data-step="4">
+                <h4>Étape 4 — Lettre de motivation</h4>
+                <p class="text-muted">Téléversez votre lettre de motivation (PDF, JPG ou PNG).</p>
+                <div class="mb-3">{{ form.lettre_motivation.label_tag }}{{ form.lettre_motivation }}{{ form.lettre_motivation.errors }}</div>
+            </div>
+
+            <div class="step-pane" data-step="5">
+                <h4>Étape 5 — Documents à joindre</h4>
+                <p class="text-muted">Formats acceptés: PDF, JPG, PNG (max 5 Mo)</p>
+                <div class="row g-3">
+                    <div class="col-md-6 document-field">{{ form.piece_identite.label_tag }}{{ form.piece_identite }}{{ form.piece_identite.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 document-field">{{ form.bulletin_an1.label_tag }}{{ form.bulletin_an1 }}{{ form.bulletin_an1.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 document-field">{{ form.bulletin_an2.label_tag }}{{ form.bulletin_an2 }}{{ form.bulletin_an2.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 document-field">{{ form.lettre_recommandation.label_tag }}{{ form.lettre_recommandation }}{{ form.lettre_recommandation.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 document-field d-none" id="autorisationBlock">{{ form.autorisation_parentale.label_tag }}{{ form.autorisation_parentale }}{{ form.autorisation_parentale.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                </div>
+            </div>
+
+            <div class="step-pane" data-step="6">
+                <h4>Étape 6 — Quiz d'évaluation</h4>
+                <p class="text-muted">Ce quiz est un outil pour mieux vous connaître. Il n'y a pas de mauvaises réponses — répondez sincèrement.</p>
+                <div class="quiz-timer" id="quizTimer">Temps indicatif : 00:00</div>
+
+                <div class="quiz-tabs-scroll">
+                    <ul class="nav nav-tabs mb-3 flex-nowrap" id="quizTabs" role="tablist">
+                        {% for tab in quiz_tabs %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if forloop.first %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-{{ tab.key }}" type="button" role="tab">{{ tab.label }}</button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="tab-content">
+                    {% for tab in quiz_tabs %}
+                        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="tab-{{ tab.key }}" role="tabpanel">
+                            {% for item in tab.items %}
+                                <div class="quiz-question mb-4">
+                                    <p class="fw-semibold mb-2">{{ forloop.counter }}. {{ item.question.question }}</p>
+                                    <div class="quiz-options">
+                                        {% for choice in item.field %}
+                                            <label class="quiz-option">
+                                                {{ choice.tag }}
+                                                <span>{{ choice.choice_label }}</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                    {{ item.field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4 step-actions">
+                <button type="button" class="btn btn-outline-secondary" id="prevStep" disabled>Précédent</button>
+                <div class="d-flex gap-2 step-actions-group">
+                    <button type="button" class="btn btn-aftec" id="nextStep">Suivant</button>
+                    <button type="submit" class="btn btn-success d-none" id="submitBtn">Soumettre la candidature</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+

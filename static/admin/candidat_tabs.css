@@ -1,0 +1,26 @@
+﻿.aftec-admin-tabs {
+  margin: 12px 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aftec-admin-tab-btn {
+  border: 1px solid #d4d4d4;
+  background: #fff;
+  color: #1a1a2e;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aftec-admin-tab-btn.active {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+
+.aftec-admin-tab-panel.hidden {
+  display: none;
+}

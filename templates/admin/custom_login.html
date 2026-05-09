@@ -1,0 +1,197 @@
+﻿{% load i18n static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% trans 'Connexion administration' %} | AFTEC 2026</title>
+    <style>
+        :root {
+            --ink: #11243d;
+            --ink-soft: #3d4e68;
+            --accent: #e94560;
+            --gold: #f5a623;
+            --card: rgba(255, 255, 255, 0.92);
+            --border: rgba(17, 36, 61, 0.14);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 10% 12%, rgba(245,166,35,.2), transparent 35%),
+                radial-gradient(circle at 90% 90%, rgba(15,155,88,.16), transparent 30%),
+                linear-gradient(145deg, #f5f9ff, #eaf1fb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 22px;
+        }
+        .login-shell {
+            width: 100%;
+            max-width: 1020px;
+            display: grid;
+            grid-template-columns: 1.15fr .85fr;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 28px 60px rgba(17, 36, 61, .16);
+            background: #fff;
+        }
+        .hero {
+            padding: 34px;
+            background: linear-gradient(135deg, #0e2a47, #173d64);
+            color: #fff;
+            position: relative;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 88% 12%, rgba(245,166,35,.36), transparent 32%);
+            pointer-events: none;
+        }
+        .logos {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .logos img {
+            height: 42px;
+            width: auto;
+            border-radius: 8px;
+            background: rgba(255,255,255,.94);
+            padding: 4px;
+        }
+        .hero h1 {
+            position: relative;
+            z-index: 1;
+            margin: 0 0 8px;
+            font-size: 2rem;
+            line-height: 1.15;
+            letter-spacing: .2px;
+        }
+        .hero p {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            color: rgba(255,255,255,.9);
+            line-height: 1.45;
+        }
+        .panel {
+            padding: 34px;
+            background: var(--card);
+        }
+        .panel h2 {
+            margin: 0 0 8px;
+            font-size: 1.45rem;
+            color: var(--ink);
+        }
+        .panel small {
+            color: var(--ink-soft);
+            display: block;
+            margin-bottom: 18px;
+        }
+        .msg {
+            border: 1px solid rgba(233,69,96,.2);
+            background: rgba(233,69,96,.08);
+            color: #9e1f35;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: .92rem;
+        }
+        .field { margin-bottom: 14px; }
+        .field label {
+            display: block;
+            font-size: .9rem;
+            color: var(--ink-soft);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .field input {
+            width: 100%;
+            height: 44px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 0 12px;
+            font-size: .98rem;
+            background: #fff;
+        }
+        .field input:focus {
+            outline: none;
+            border-color: #3d73ad;
+            box-shadow: 0 0 0 3px rgba(61,115,173,.16);
+        }
+        .cta {
+            width: 100%;
+            height: 46px;
+            border: 0;
+            border-radius: 11px;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(90deg, var(--accent), var(--gold));
+            box-shadow: 0 10px 20px rgba(233,69,96,.22);
+        }
+        .help {
+            margin-top: 14px;
+            font-size: .87rem;
+            color: var(--ink-soft);
+        }
+        .help a { color: #1f4f82; text-decoration: none; }
+        @media (max-width: 900px) {
+            .login-shell { grid-template-columns: 1fr; }
+            .hero, .panel { padding: 24px; }
+            .hero h1 { font-size: 1.62rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="login-shell">
+        <section class="hero">
+            <div class="logos">
+                <img src="{% static 'img/logo-aftec.png' %}" alt="Logo AFTEC">
+                <img src="{% static 'img/logo-kcomat.jpeg' %}" alt="Logo KcoMat">
+            </div>
+            <h1>Administration AFTEC 2026</h1>
+            <p>Interface sécurisée de gestion des candidatures, décisions et statistiques officielles.</p>
+        </section>
+
+        <section class="panel">
+            <h2>{% trans 'Connexion' %}</h2>
+            <small>{% trans 'Utilisez vos identifiants administrateur.' %}</small>
+
+            {% if form.errors and not form.non_field_errors %}
+                <div class="msg">{% trans "Nom d'utilisateur ou mot de passe incorrect." %}</div>
+            {% endif %}
+            {% if form.non_field_errors %}
+                <div class="msg">{{ form.non_field_errors|striptags }}</div>
+            {% endif %}
+
+            <form action="{{ app_path }}" method="post" id="login-form">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="id_username">{% trans 'Nom d’utilisateur' %}</label>
+                    {{ form.username }}
+                </div>
+                <div class="field">
+                    <label for="id_password">{% trans 'Mot de passe' %}</label>
+                    {{ form.password }}
+                </div>
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+                <button class="cta" type="submit">{% trans 'Se connecter' %}</button>
+            </form>
+
+            <p class="help">Retour au site public: <a href="/">AFTEC 2026</a></p>
+        </section>
+    </main>
+</body>
+</html>

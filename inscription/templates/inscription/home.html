@@ -1,0 +1,154 @@
+﻿{% extends 'inscription/base.html' %}
+{% load static %}
+
+{% block title %}AFTEC 2026 | Accueil{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container py-5">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7" data-aos="fade-right">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <img src="{% static 'img/logo-kcomat.jpeg' %}" alt="Logo KcoMat" style="height:44px;width:auto;border-radius:6px;background:#fff;padding:3px;">
+                    <span class="badge bg-warning text-dark">Organisé par KcoMat</span>
+                </div>
+                <h1 class="display-4 fw-bold mb-3">AFTEC 2026</h1>
+                <p class="lead mb-4">Académie de Formation Technologique pour les Étudiants et Collégiens<br>Du <strong>03 au 21 Août 2026</strong> à <strong>Pobè, Bénin</strong>.</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{% url 'inscription:formulaire' %}" class="btn btn-aftec btn-lg">S'inscrire maintenant</a>
+                    <a href="#programme" class="btn btn-outline-light btn-lg">Découvrir le programme</a>
+                </div>
+            </div>
+            <div class="col-lg-5" data-aos="fade-left">
+                <div class="glass-card p-4">
+                    <img src="{% static 'img/hero-tech.jpg' %}" alt="Illustration AFTEC" class="img-fluid rounded mb-3">
+                    <h3 class="mb-3">Pourquoi AFTEC ?</h3>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">Initiation pratique en électronique, IA et programmation</li>
+                        <li class="mb-2">Encadrement par des experts KcoMat</li>
+                        <li class="mb-2">Compétition finale et attestations officielles</li>
+                        <li>Vision d'innovation locale pour la jeunesse de Pobè</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-4">
+    <div class="container">
+        <div class="official-card" data-aos="fade-up">
+            <div class="official-head">
+                <div>
+                    <h4>Informations officielles KcoMat</h4>
+                    <p class="text-muted mb-0">Références juridiques et contacts certifiés.</p>
+                </div>
+                <span class="official-chip">Vérifié</span>
+            </div>
+            <div class="official-grid">
+                <a class="official-item official-item-link" href="{{ KCOMAT_INFO.site }}" target="_blank" rel="noopener">
+                    <span class="official-label">Site officiel</span>
+                    <strong>{{ KCOMAT_INFO.site }}</strong>
+                </a>
+                <div class="official-item">
+                    <span class="official-label">Identifiants</span>
+                    <strong>IFU: {{ KCOMAT_INFO.ifu }}</strong>
+                    <span>RCCM: {{ KCOMAT_INFO.rccm }}</span>
+                </div>
+                <a class="official-item official-item-link" href="https://wa.me/{{ KCOMAT_INFO.whatsapp }}" target="_blank" rel="noopener">
+                    <span class="official-label">WhatsApp</span>
+                    <strong>+{{ KCOMAT_INFO.whatsapp }}</strong>
+                </a>
+                <a class="official-item official-item-link" href="{{ KCOMAT_INFO.maps_embed }}" target="_blank" rel="noopener">
+                    <span class="official-label">Adresse</span>
+                    <strong>{{ KCOMAT_INFO.address }}</strong>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-md-4" data-aos="zoom-in">
+                <div class="metric-card">
+                    <h2 class="counter" data-target="100">0</h2>
+                    <p>Places disponibles</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="zoom-in" data-aos-delay="100">
+                <div class="metric-card">
+                    <h2 class="counter" data-target="15">0</h2>
+                    <p>Jours intensifs</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
+                <div class="metric-card">
+                    <h2 class="counter" data-target="6">0</h2>
+                    <p>Modules principaux</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5" id="programme">
+    <div class="container">
+        <div class="section-title" data-aos="fade-up">
+            <h2>Programme AFTEC 2026</h2>
+            <p>Un parcours progressif, pratique et orienté innovation.</p>
+        </div>
+        <div class="timeline">
+            <div class="timeline-item" data-aos="fade-up">
+                <h5>Phase 1 : Sensibilisation & orientation</h5>
+                <p>Visites d'établissements, communication locale et ouverture des inscriptions.</p>
+            </div>
+            <div class="timeline-item" data-aos="fade-up" data-aos-delay="100">
+                <h5>Phase 2 : Panels métiers & ateliers</h5>
+                <p>Électronique, domotique, programmation, IA et innovation entrepreneuriale.</p>
+            </div>
+            <div class="timeline-item" data-aos="fade-up" data-aos-delay="200">
+                <h5>Phase 3 : Laboratoire d'innovation</h5>
+                <p>Réalisation de projets en équipe et prototypage accompagné.</p>
+            </div>
+            <div class="timeline-item" data-aos="fade-up" data-aos-delay="300">
+                <h5>Phase 4 : Compétition finale & attestations</h5>
+                <p>Présentation des projets et clôture officielle avec remise d'attestations.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5" id="equipe">
+    <div class="container">
+        <div class="section-title" data-aos="fade-up">
+            <h2>Équipe KcoMat</h2>
+            <p>Une équipe pluridisciplinaire engagée pour la transformation numérique locale.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4" data-aos="fade-up">
+                <div class="team-card-premium h-100">
+                    <span class="team-tag">Direction</span>
+                    <h5>ECHO Temitokpè Emmanuel</h5>
+                    <p class="mb-0">Directeur Général — Coordination générale du projet</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="team-card-premium h-100">
+                    <span class="team-tag">Encadrement</span>
+                    <h5>Équipe pédagogique</h5>
+                    <p class="mb-0">Mentors techniques en électronique, code, IA, robotique et innovation.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="team-card-premium h-100">
+                    <span class="team-tag">Écosystème</span>
+                    <h5>Partenaires locaux</h5>
+                    <p class="mb-0">Mairie, établissements, médias et sponsors engagés pour la jeunesse.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

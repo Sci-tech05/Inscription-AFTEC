@@ -1,0 +1,139 @@
+﻿{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+{{ block.super }}
+
+<style>
+    .aftec-dashboard {
+        margin-top: 24px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .08);
+    }
+    .aftec-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    .aftec-dashboard-grid canvas {
+        width: 100% !important;
+        max-width: 100%;
+        min-height: 220px;
+        max-height: 320px;
+    }
+    .aftec-table-wrap {
+        overflow-x: auto;
+    }
+    @media (max-width: 768px) {
+        .aftec-dashboard {
+            padding: 14px;
+            border-radius: 10px;
+        }
+        .aftec-dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        .aftec-dashboard-grid canvas {
+            min-height: 190px;
+            max-height: 260px;
+        }
+    }
+</style>
+
+<div class="aftec-dashboard">
+    <h2 style="margin-top: 0;">Statistiques AFTEC 2026</h2>
+    <p style="margin: 0 0 8px;">
+        <strong>{{ kcomat.name }}</strong> |
+        <a href="{{ kcomat.site }}" target="_blank">{{ kcomat.site }}</a> |
+        {{ kcomat.phone }} |
+        {{ kcomat.email }}
+    </p>
+    <p>Total candidatures : <strong id="totalCount">0</strong></p>
+
+    <div class="aftec-dashboard-grid">
+        <canvas id="statusChart"></canvas>
+        <canvas id="genderChart"></canvas>
+        <canvas id="classChart"></canvas>
+        <canvas id="evolutionChart"></canvas>
+        <canvas id="quizRadarChart"></canvas>
+    </div>
+
+    <h3 style="margin-top: 24px;">Top 10 candidats (score global)</h3>
+    <div class="aftec-table-wrap">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;">Candidat</th>
+                    <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;">Score</th>
+                </tr>
+            </thead>
+            <tbody id="topTable"></tbody>
+        </table>
+    </div>
+</div>
+
+{{ dashboard_data|json_script:"dashboard-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+    const el = document.getElementById('dashboard-data');
+    if (!el) return;
+    const data = JSON.parse(el.textContent || '{}');
+
+    let current = 0;
+    const target = data.total || 0;
+    const totalEl = document.getElementById('totalCount');
+    const timer = setInterval(() => {
+        current += Math.max(1, Math.ceil(target / 30));
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
+        }
+        totalEl.textContent = current;
+    }, 30);
+
+    const palette = ['#16213E', '#0F9B58', '#F5A623', '#E94560', '#1A1A2E'];
+
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: { labels: data.statuts.labels, datasets: [{ data: data.statuts.values, backgroundColor: palette }] },
+    });
+
+    new Chart(document.getElementById('genderChart'), {
+        type: 'bar',
+        data: { labels: data.sexe.labels, datasets: [{ label: 'Répartition sexe', data: data.sexe.values, backgroundColor: ['#1A1A2E', '#E94560'] }] },
+        options: { scales: { y: { beginAtZero: true } } },
+    });
+
+    new Chart(document.getElementById('classChart'), {
+        type: 'bar',
+        data: { labels: data.classe.labels, datasets: [{ label: 'Par classe', data: data.classe.values, backgroundColor: '#F5A623' }] },
+        options: { scales: { y: { beginAtZero: true } } },
+    });
+
+    new Chart(document.getElementById('evolutionChart'), {
+        type: 'line',
+        data: { labels: data.evolution.labels, datasets: [{ label: 'Inscriptions / jour', data: data.evolution.values, borderColor: '#0F9B58', fill: false, tension: 0.3 }] },
+        options: { scales: { y: { beginAtZero: true } } },
+    });
+
+    new Chart(document.getElementById('quizRadarChart'), {
+        type: 'radar',
+        data: {
+            labels: data.quiz_avg.labels,
+            datasets: [{ label: 'Moyenne /5', data: data.quiz_avg.values, borderColor: '#E94560', backgroundColor: 'rgba(233,69,96,.2)' }],
+        },
+        options: { scales: { r: { suggestedMin: 0, suggestedMax: 5 } } },
+    });
+
+    const topTable = document.getElementById('topTable');
+    (data.top10 || []).forEach((item) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td style="border-bottom:1px solid #eee;padding:8px;">${item.nom}</td><td style="border-bottom:1px solid #eee;padding:8px;">${item.score}</td>`;
+        topTable.appendChild(row);
+    });
+})();
+</script>
+{% endblock %}

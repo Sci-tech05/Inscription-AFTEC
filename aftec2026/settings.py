@@ -2,14 +2,19 @@ import os
 from pathlib import Path
 from decouple import config
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 # Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',          # ton dossier static principal
+]
+
 # Pour la production 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 def env_bool(name, default):
     value = str(config(name, default=str(default))).strip().lower()

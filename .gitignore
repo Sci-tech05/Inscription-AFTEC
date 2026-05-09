@@ -3,12 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Django local data
-.env
-db.sqlite3
-media/
-staticfiles/
-
 # OS/editor
 .DS_Store
 Thumbs.db

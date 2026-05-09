@@ -3,6 +3,7 @@
 
 {% block coltype %}colM{% endblock %}
 {% block sidebar %}{% endblock %}
+{% block bodyclass %}aftec-dashboard{% endblock %}
 {% block nav-sidebar %}
 <nav class="aftec-side-nav" aria-label="Navigation admin">
     <h2>Navigation</h2>
@@ -16,6 +17,9 @@
 
 {% block content %}
 <style>
+    #content {
+        width: auto;
+    }
     #content-main {
         width: 100%;
         float: none;

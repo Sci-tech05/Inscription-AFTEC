@@ -73,12 +73,11 @@ h5 {
 }
 
 .brand-logo {
-    width: 60px;
-    height: 60px;
-    border-radius: 8px;
-    object-fit: contain;
-    background: rgba(255, 255, 255, 0.92);
-    padding: 4px;
+    width: 100px;
+    height: 46px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 3px;
 }
 
 .site-header {
@@ -86,7 +85,8 @@ h5 {
     top: 0;
     z-index: 1000;
     backdrop-filter: blur(8px);
-    background: var(--header-bg);
+    background: linear-gradient(90deg, #1c4d6a, #2a6f8f);
+    color: #fff;
     border-bottom: 1px solid var(--header-border);
 }
 

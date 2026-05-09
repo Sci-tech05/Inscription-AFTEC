@@ -113,6 +113,10 @@
         min-height: 200px;
         max-height: 260px;
     }
+    #quizRadarChart {
+        min-height: 300px;
+        max-height: 340px;
+    }
     .aftec-table-wrap { overflow-x: auto; margin-top: 10px; }
     .aftec-table {
         width: 100%;
@@ -201,7 +205,38 @@
         ['genderChart', 'bar', { labels: data.sexe?.labels || [], datasets: [{ label: 'Répartition sexe', data: data.sexe?.values || [], backgroundColor: ['#2b5b84', '#E94560'] }] }, { scales: { y: { beginAtZero: true } } }],
         ['classChart', 'bar', { labels: data.classe?.labels || [], datasets: [{ label: 'Par niveau', data: data.classe?.values || [], backgroundColor: '#F5A623' }] }, { scales: { y: { beginAtZero: true } } }],
         ['evolutionChart', 'line', { labels: data.evolution?.labels || [], datasets: [{ label: 'Inscriptions / jour', data: data.evolution?.values || [], borderColor: '#0F9B58', fill: false, tension: 0.28 }] }, { scales: { y: { beginAtZero: true } } }],
-        ['quizRadarChart', 'radar', { labels: data.quiz_avg?.labels || [], datasets: [{ label: 'Moyenne /5', data: data.quiz_avg?.values || [], borderColor: '#E94560', backgroundColor: 'rgba(233,69,96,.18)' }] }, { scales: { r: { suggestedMin: 0, suggestedMax: 5 } } }],
+        ['quizRadarChart', 'radar', {
+            labels: data.quiz_avg?.labels || [],
+            datasets: [{
+                label: 'Moyenne /5',
+                data: (data.quiz_avg?.values || []).map((v) => Number(v || 0)),
+                showLine: true,
+                borderColor: '#E94560',
+                backgroundColor: 'rgba(233,69,96,0.28)',
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#E94560',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 1.5
+            }]
+        }, {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                line: { borderWidth: 3, tension: 0.18 }
+            },
+            scales: {
+                r: {
+                    min: 0,
+                    max: 5,
+                    ticks: { stepSize: 1, backdropColor: 'transparent' },
+                    grid: { color: '#d8e2ee' },
+                    angleLines: { color: '#d8e2ee' },
+                    pointLabels: { color: '#17354f', font: { size: 11 } }
+                }
+            }
+        }],
     ];
 
     charts.forEach(([id, type, chartData, options]) => {

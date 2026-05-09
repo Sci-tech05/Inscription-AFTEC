@@ -132,16 +132,21 @@ body {
   border-color: #d9e6f1;
 }
 
-.aftec-side-nav .aftec-side-nav-cta {
+.aftec-side-nav a.aftec-side-nav-cta:link,
+.aftec-side-nav a.aftec-side-nav-cta:visited {
   margin-top: 8px;
   text-align: center;
-  color: #fff;
-  background: linear-gradient(90deg, #f5a623, #e94560);
-  border-color: transparent;
+  color: #fff !important;
+  background: linear-gradient(90deg, #f5a623, #e94560) !important;
+  border-color: transparent !important;
 }
 
-.aftec-side-nav .aftec-side-nav-cta:hover {
-  color: #fff;
+.aftec-side-nav a.aftec-side-nav-cta:hover,
+.aftec-side-nav a.aftec-side-nav-cta:focus {
+  color: #fff !important;
+  background: linear-gradient(90deg, #f5a623, #e94560) !important;
+  border-color: transparent !important;
+  text-decoration: none;
   filter: brightness(1.06);
 }
 

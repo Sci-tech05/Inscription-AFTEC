@@ -1,0 +1,189 @@
+:root {
+  --aftec-ink: #11324d;
+  --aftec-ink-soft: #2f5470;
+  --aftec-accent: #f5c847;
+  --aftec-bg: #edf3f8;
+  --aftec-card: #ffffff;
+  --aftec-border: #d6e2ec;
+  --aftec-success: #179b4a;
+}
+
+body {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #eff5fb 0, #e7eef5 100%);
+}
+
+#container {
+  background: transparent;
+}
+
+#header {
+  background: linear-gradient(90deg, #1c4d6a, #2a6f8f);
+  color: #fff;
+  border-bottom: 0;
+  box-shadow: 0 10px 24px rgba(17, 50, 77, 0.2);
+}
+
+#branding {
+  float: none;
+}
+
+.aftec-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.55rem;
+  letter-spacing: 0.01em;
+}
+
+.aftec-brand img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px;
+}
+
+.aftec-user-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.aftec-user-tools,
+.aftec-user-tools a,
+.aftec-user-tools button {
+  color: #fff;
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+
+.aftec-user-tools a:hover {
+  color: var(--aftec-accent);
+}
+
+.aftec-user-tools button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 700;
+}
+
+.aftec-top-nav {
+  display: flex;
+  gap: 10px;
+  padding: 10px 18px 14px;
+  overflow-x: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.aftec-top-nav a {
+  display: inline-block;
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.aftec-top-nav a:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.aftec-crumbs {
+  padding: 12px 20px;
+  margin: 0;
+  background: #19435b;
+  color: #d9ebf7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.98rem;
+}
+
+.aftec-crumbs a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+#main {
+  padding: 18px;
+}
+
+#content {
+  background: var(--aftec-card);
+  border: 1px solid var(--aftec-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 20px rgba(24, 57, 85, 0.07);
+  padding: 18px;
+}
+
+#content h1 {
+  color: var(--aftec-ink);
+  font-weight: 800;
+}
+
+div.breadcrumbs {
+  display: none;
+}
+
+#changelist-filter h2,
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: linear-gradient(90deg, #2e6788, #3b799b);
+  color: #fff;
+}
+
+input, select, textarea {
+  border-radius: 10px;
+}
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.messagelist li.success {
+  background: #d9f4df;
+  border-color: #9dd8ad;
+  color: #0a5a2a;
+}
+
+.messagelist li.warning {
+  background: #fff5dc;
+  border-color: #f1d38e;
+  color: #7a5500;
+}
+
+.aftec-footer {
+  text-align: center;
+  color: #587188;
+  font-size: 0.86rem;
+  padding: 14px 0 24px;
+}
+
+#toggle-nav-sidebar,
+#nav-sidebar {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .aftec-brand {
+    font-size: 1.2rem;
+  }
+  #main {
+    padding: 12px;
+  }
+  #content {
+    padding: 12px;
+  }
+}

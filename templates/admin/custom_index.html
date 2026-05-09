@@ -2,76 +2,213 @@
 {% load i18n %}
 
 {% block content %}
-{{ block.super }}
-
 <style>
-    .aftec-dashboard {
-        margin-top: 24px;
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, .08);
+    .aftec-admin-shell {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: minmax(360px, .85fr) minmax(760px, 1.65fr);
+        gap: 20px;
+        width: 100%;
+        align-items: start;
     }
+    .aftec-panel {
+        background: #fff;
+        border: 1px solid #e4eaf1;
+        border-radius: 14px;
+        box-shadow: 0 12px 28px rgba(13, 41, 67, .08);
+        overflow: hidden;
+    }
+    .aftec-panel-head {
+        padding: 14px 16px;
+        background: linear-gradient(120deg, #133e64, #2f6a8e);
+        color: #fff;
+    }
+    .aftec-panel-head h2 {
+        margin: 0;
+        font-size: 1.16rem;
+        font-weight: 700;
+    }
+    .aftec-panel-head p {
+        margin: 4px 0 0;
+        opacity: .92;
+        font-size: .88rem;
+    }
+    .aftec-body {
+        padding: 16px;
+    }
+    .aftec-app {
+        border: 1px solid #e7edf5;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+    .aftec-app h3 {
+        margin: 0;
+        padding: 10px 12px;
+        background: #f4f8fc;
+        color: #17354f;
+        font-size: .98rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+    .aftec-model-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border-top: 1px solid #eef2f7;
+    }
+    .aftec-model-row:first-of-type { border-top: 0; }
+    .aftec-model-name {
+        color: #183650;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .aftec-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .aftec-actions a {
+        font-size: .82rem;
+        font-weight: 700;
+        text-decoration: none;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid #dce6f3;
+        color: #24527b;
+        background: #f7fbff;
+    }
+    .aftec-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .aftec-metric {
+        padding: 10px;
+        border-radius: 10px;
+        background: #f6faff;
+        border: 1px solid #e2ecf8;
+    }
+    .aftec-metric span { font-size: .8rem; color: #51657c; display: block; }
+    .aftec-metric strong { font-size: 1.25rem; color: #17354f; display: block; overflow-wrap: anywhere; }
     .aftec-dashboard-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(2, minmax(320px, 1fr));
+        gap: 14px;
     }
-    .aftec-dashboard-grid canvas {
+    .aftec-chart-card {
+        border: 1px solid #e7edf5;
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+    }
+    .aftec-chart-card h4 {
+        margin: 0 0 6px;
+        font-size: .9rem;
+        color: #17354f;
+    }
+    .aftec-chart-card canvas {
         width: 100% !important;
-        max-width: 100%;
-        min-height: 220px;
-        max-height: 320px;
+        min-height: 200px;
+        max-height: 260px;
     }
-    .aftec-table-wrap {
-        overflow-x: auto;
+    .aftec-table-wrap { overflow-x: auto; margin-top: 10px; }
+    .aftec-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .9rem;
     }
-    @media (max-width: 768px) {
-        .aftec-dashboard {
-            padding: 14px;
-            border-radius: 10px;
-        }
-        .aftec-dashboard-grid {
-            grid-template-columns: 1fr;
-            gap: 14px;
-        }
-        .aftec-dashboard-grid canvas {
-            min-height: 190px;
-            max-height: 260px;
-        }
+    .aftec-table th,
+    .aftec-table td {
+        border-bottom: 1px solid #e7edf5;
+        padding: 8px;
+        text-align: left;
+    }
+    .aftec-table th { color: #2d4d6b; }
+    @media (max-width: 1440px) {
+        .aftec-admin-shell { grid-template-columns: minmax(340px, .9fr) minmax(560px, 1.4fr); }
+    }
+    @media (max-width: 1180px) {
+        .aftec-admin-shell { grid-template-columns: 1fr; }
+        .aftec-metrics { grid-template-columns: 1fr 1fr 1fr; }
+        .aftec-dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    }
+    @media (max-width: 700px) {
+        .aftec-metrics { grid-template-columns: 1fr; }
+        .aftec-model-row { flex-direction: column; align-items: flex-start; }
     }
 </style>
 
-<div class="aftec-dashboard">
-    <h2 style="margin-top: 0;">Statistiques AFTEC 2026</h2>
-    <p style="margin: 0 0 8px;">
-        <strong>{{ kcomat.name }}</strong> |
-        <a href="{{ kcomat.site }}" target="_blank">{{ kcomat.site }}</a> |
-        {{ kcomat.phone }} |
-        {{ kcomat.email }}
-    </p>
-    <p>Total candidatures : <strong id="totalCount">0</strong></p>
+<div class="aftec-admin-shell">
+    <section class="aftec-panel">
+        <header class="aftec-panel-head">
+            <h2>Gestion des modules</h2>
+            <p>Accès rapide aux sections administratives AFTEC.</p>
+        </header>
+        <div class="aftec-body">
+            {% if app_list %}
+                {% for app in app_list %}
+                    <article class="aftec-app">
+                        <h3>{{ app.name }}</h3>
+                        {% for model in app.models %}
+                            <div class="aftec-model-row">
+                                {% if model.admin_url %}
+                                    <a class="aftec-model-name" href="{{ model.admin_url }}">{{ model.name }}</a>
+                                {% else %}
+                                    <span class="aftec-model-name">{{ model.name }}</span>
+                                {% endif %}
+                                <div class="aftec-actions">
+                                    {% if model.add_url %}<a href="{{ model.add_url }}">Ajouter</a>{% endif %}
+                                    {% if model.admin_url and model.view_only %}<a href="{{ model.admin_url }}">Voir</a>{% endif %}
+                                    {% if model.admin_url and not model.view_only %}<a href="{{ model.admin_url }}">Modifier</a>{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p>Aucun module disponible pour votre profil.</p>
+            {% endif %}
+        </div>
+    </section>
 
-    <div class="aftec-dashboard-grid">
-        <canvas id="statusChart"></canvas>
-        <canvas id="genderChart"></canvas>
-        <canvas id="classChart"></canvas>
-        <canvas id="evolutionChart"></canvas>
-        <canvas id="quizRadarChart"></canvas>
-    </div>
+    <section class="aftec-panel">
+        <header class="aftec-panel-head">
+            <h2>Tableau de bord AFTEC 2026</h2>
+            <p>{{ kcomat.name }} | <a href="{{ kcomat.site }}" style="color:#fff" target="_blank">{{ kcomat.site }}</a></p>
+        </header>
+        <div class="aftec-body">
+            <div class="aftec-metrics">
+                <div class="aftec-metric"><span>Total candidatures</span><strong id="totalCount">0</strong></div>
+                <div class="aftec-metric"><span>Contact</span><strong style="font-size:.95rem">{{ kcomat.phone }}</strong></div>
+                <div class="aftec-metric"><span>Email</span><strong style="font-size:.95rem">{{ kcomat.email }}</strong></div>
+            </div>
 
-    <h3 style="margin-top: 24px;">Top 10 candidats (score global)</h3>
-    <div class="aftec-table-wrap">
-        <table style="width:100%;border-collapse:collapse;">
-            <thead>
-                <tr>
-                    <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;">Candidat</th>
-                    <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;">Score</th>
-                </tr>
-            </thead>
-            <tbody id="topTable"></tbody>
-        </table>
-    </div>
+            <div class="aftec-dashboard-grid">
+                <div class="aftec-chart-card"><h4>Statuts</h4><canvas id="statusChart"></canvas></div>
+                <div class="aftec-chart-card"><h4>Répartition sexe</h4><canvas id="genderChart"></canvas></div>
+                <div class="aftec-chart-card"><h4>Niveaux</h4><canvas id="classChart"></canvas></div>
+                <div class="aftec-chart-card"><h4>Inscriptions / jour</h4><canvas id="evolutionChart"></canvas></div>
+                <div class="aftec-chart-card"><h4>Moyenne quiz</h4><canvas id="quizRadarChart"></canvas></div>
+            </div>
+
+            <div class="aftec-table-wrap">
+                <table class="aftec-table">
+                    <thead>
+                        <tr>
+                            <th>Candidat</th>
+                            <th>Score global</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 </div>
 
 {{ dashboard_data|json_script:"dashboard-data" }}
@@ -86,52 +223,34 @@
     const target = data.total || 0;
     const totalEl = document.getElementById('totalCount');
     const timer = setInterval(() => {
-        current += Math.max(1, Math.ceil(target / 30));
+        current += Math.max(1, Math.ceil(target / 28));
         if (current >= target) {
             current = target;
             clearInterval(timer);
         }
         totalEl.textContent = current;
-    }, 30);
+    }, 28);
 
-    const palette = ['#16213E', '#0F9B58', '#F5A623', '#E94560', '#1A1A2E'];
+    const palette = ['#2b5b84', '#0F9B58', '#F5A623', '#E94560', '#1A1A2E'];
 
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: { labels: data.statuts.labels, datasets: [{ data: data.statuts.values, backgroundColor: palette }] },
-    });
+    const charts = [
+        ['statusChart', 'doughnut', { labels: data.statuts?.labels || [], datasets: [{ data: data.statuts?.values || [], backgroundColor: palette }] }, {}],
+        ['genderChart', 'bar', { labels: data.sexe?.labels || [], datasets: [{ label: 'Répartition sexe', data: data.sexe?.values || [], backgroundColor: ['#2b5b84', '#E94560'] }] }, { scales: { y: { beginAtZero: true } } }],
+        ['classChart', 'bar', { labels: data.classe?.labels || [], datasets: [{ label: 'Par niveau', data: data.classe?.values || [], backgroundColor: '#F5A623' }] }, { scales: { y: { beginAtZero: true } } }],
+        ['evolutionChart', 'line', { labels: data.evolution?.labels || [], datasets: [{ label: 'Inscriptions / jour', data: data.evolution?.values || [], borderColor: '#0F9B58', fill: false, tension: 0.28 }] }, { scales: { y: { beginAtZero: true } } }],
+        ['quizRadarChart', 'radar', { labels: data.quiz_avg?.labels || [], datasets: [{ label: 'Moyenne /5', data: data.quiz_avg?.values || [], borderColor: '#E94560', backgroundColor: 'rgba(233,69,96,.18)' }] }, { scales: { r: { suggestedMin: 0, suggestedMax: 5 } } }],
+    ];
 
-    new Chart(document.getElementById('genderChart'), {
-        type: 'bar',
-        data: { labels: data.sexe.labels, datasets: [{ label: 'Répartition sexe', data: data.sexe.values, backgroundColor: ['#1A1A2E', '#E94560'] }] },
-        options: { scales: { y: { beginAtZero: true } } },
-    });
-
-    new Chart(document.getElementById('classChart'), {
-        type: 'bar',
-        data: { labels: data.classe.labels, datasets: [{ label: 'Par classe', data: data.classe.values, backgroundColor: '#F5A623' }] },
-        options: { scales: { y: { beginAtZero: true } } },
-    });
-
-    new Chart(document.getElementById('evolutionChart'), {
-        type: 'line',
-        data: { labels: data.evolution.labels, datasets: [{ label: 'Inscriptions / jour', data: data.evolution.values, borderColor: '#0F9B58', fill: false, tension: 0.3 }] },
-        options: { scales: { y: { beginAtZero: true } } },
-    });
-
-    new Chart(document.getElementById('quizRadarChart'), {
-        type: 'radar',
-        data: {
-            labels: data.quiz_avg.labels,
-            datasets: [{ label: 'Moyenne /5', data: data.quiz_avg.values, borderColor: '#E94560', backgroundColor: 'rgba(233,69,96,.2)' }],
-        },
-        options: { scales: { r: { suggestedMin: 0, suggestedMax: 5 } } },
+    charts.forEach(([id, type, chartData, options]) => {
+        const ctx = document.getElementById(id);
+        if (!ctx) return;
+        new Chart(ctx, { type, data: chartData, options });
     });
 
     const topTable = document.getElementById('topTable');
     (data.top10 || []).forEach((item) => {
         const row = document.createElement('tr');
-        row.innerHTML = `<td style="border-bottom:1px solid #eee;padding:8px;">${item.nom}</td><td style="border-bottom:1px solid #eee;padding:8px;">${item.score}</td>`;
+        row.innerHTML = `<td>${item.nom}</td><td>${item.score}</td>`;
         topTable.appendChild(row);
     });
 })();

@@ -173,6 +173,56 @@ class CandidatAdmin(admin.ModelAdmin):
         css = {"all": ("admin/candidat_tabs.css",)}
         js = ("admin/candidat_tabs.js",)
 
+    def save_related(self, request, form, formsets, change):
+        previous_states = {}
+        for formset in formsets:
+            if getattr(formset, "model", None) is not StatutCandidat:
+                continue
+            for inline_form in formset.forms:
+                instance = inline_form.instance
+                if instance.pk:
+                    previous_states[instance.pk] = StatutCandidat.objects.filter(pk=instance.pk).values(
+                        "statut", "email_envoye"
+                    ).first()
+
+        super().save_related(request, form, formsets, change)
+
+        sent = 0
+        failed = 0
+        for formset in formsets:
+            if getattr(formset, "model", None) is not StatutCandidat:
+                continue
+            for inline_form in formset.forms:
+                cleaned_data = getattr(inline_form, "cleaned_data", None) or {}
+                if cleaned_data.get("DELETE"):
+                    continue
+
+                statut_obj = inline_form.instance
+                if not statut_obj.pk or not statut_obj.email_envoye:
+                    continue
+
+                previous = previous_states.get(statut_obj.pk)
+                should_send = previous is None or (not previous["email_envoye"]) or previous["statut"] != statut_obj.statut
+                if not should_send:
+                    continue
+
+                try:
+                    send_decision_email(statut_obj.candidat, statut_obj.statut, commentaire=statut_obj.commentaire_jury)
+                    sent += 1
+                except Exception:
+                    failed += 1
+                    statut_obj.email_envoye = False
+                    statut_obj.save(update_fields=["email_envoye"])
+
+        if sent:
+            self.message_user(request, f"{sent} email(s) envoyé(s) depuis la fiche candidat.", level=messages.SUCCESS)
+        if failed:
+            self.message_user(
+                request,
+                f"{failed} email(s) n'ont pas pu être envoyés. La case d'envoi a été décochée automatiquement.",
+                level=messages.WARNING,
+            )
+
     @admin.display(description="Nom complet")
     def nom_complet(self, obj):
         return obj.nom_complet
@@ -184,7 +234,7 @@ class CandidatAdmin(admin.ModelAdmin):
             return "-"
         value = float(moyenne)
         color = "#0F9B58" if value >= 12 else "#F5A623" if value >= 10 else "#E94560"
-        return format_html('<strong style="color:{}">{:.2f}/20</strong>', color, value)
+        return format_html('<strong style="color:{}">{}/20</strong>', color, f"{value:.2f}")
 
     @admin.display(description="Score quiz /30")
     def score_quiz_bar(self, obj):
@@ -313,6 +363,7 @@ class AFTECAdminSite(AdminSite):
     index_title = "Tableau de bord AFTEC"
     index_template = "admin/custom_index.html"
     login_template = "admin/custom_login.html"
+    enable_nav_sidebar = False
 
     def each_context(self, request):
         context = super().each_context(request)
@@ -397,4 +448,36 @@ aftec_admin_site.register(Documents)
 aftec_admin_site.register(Consentement)
 aftec_admin_site.register(QuizQuestion)
 aftec_admin_site.register(QuizReponse)
-aftec_admin_site.register(StatutCandidat)
+
+
+@admin.register(StatutCandidat, site=aftec_admin_site)
+class StatutCandidatAdmin(admin.ModelAdmin):
+    list_display = ("candidat", "statut", "email_envoye", "date_decision", "score_global_selection")
+    list_filter = ("statut", "email_envoye", "date_decision")
+    search_fields = ("candidat__nom", "candidat__prenom", "candidat__email", "candidat__numero_dossier")
+    autocomplete_fields = ("candidat",)
+
+    def save_model(self, request, obj, form, change):
+        previous = None
+        if change and obj.pk:
+            previous = StatutCandidat.objects.filter(pk=obj.pk).values("statut", "email_envoye").first()
+
+        super().save_model(request, obj, form, change)
+
+        should_send = obj.email_envoye and (
+            previous is None or (not previous["email_envoye"]) or previous["statut"] != obj.statut
+        )
+        if not should_send:
+            return
+
+        try:
+            send_decision_email(obj.candidat, obj.statut, commentaire=obj.commentaire_jury)
+            self.message_user(request, "Email de décision envoyé au candidat.", level=messages.SUCCESS)
+        except Exception:
+            obj.email_envoye = False
+            obj.save(update_fields=["email_envoye"])
+            self.message_user(
+                request,
+                "Échec d'envoi email. La case 'email envoyé' a été décochée automatiquement.",
+                level=messages.WARNING,
+            )

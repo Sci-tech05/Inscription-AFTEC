@@ -1,4 +1,5 @@
-ï»¿(function () {
+(function () {
+  if (!document.body) return;
   const isCandidatForm = document.body.classList.contains('app-inscription') && document.body.classList.contains('model-candidat') && document.body.classList.contains('change-form');
   if (!isCandidatForm) return;
 
@@ -22,10 +23,10 @@
     if (normalized.includes('note')) sections.push({ label: 'Notes', panel: group });
     else if (normalized.includes('document')) sections.push({ label: 'Documents', panel: group });
     else if (normalized.includes('quiz')) sections.push({ label: 'Quiz', panel: group });
-    else if (normalized.includes('dÃ©cision') || normalized.includes('decision')) sections.push({ label: 'DÃ©cision', panel: group });
+    else if (normalized.includes('décision') || normalized.includes('decision')) sections.push({ label: 'Décision', panel: group });
   });
 
-  const orderedLabels = ['Profil', 'Notes', 'Documents', 'Quiz', 'DÃ©cision'];
+  const orderedLabels = ['Profil', 'Notes', 'Documents', 'Quiz', 'Décision'];
   const unique = [];
   orderedLabels.forEach((label) => {
     const found = sections.find((item) => item.label === label);
@@ -53,3 +54,4 @@
 
   profileFieldset.parentNode.insertBefore(tabContainer, profileFieldset);
 })();
+

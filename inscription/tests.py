@@ -1,3 +1,84 @@
-from django.test import TestCase
+from datetime import date
+from types import SimpleNamespace
+from unittest.mock import patch
 
-# Create your tests here.
+from django.contrib.admin.options import ModelAdmin
+from django.test import RequestFactory, TestCase
+
+from inscription.admin import CandidatAdmin, StatutCandidatAdmin, aftec_admin_site
+from inscription.models import Candidat, StatutCandidat
+
+
+class CandidatAdminStatusEmailTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin = CandidatAdmin(Candidat, aftec_admin_site)
+        self.candidat = Candidat.objects.create(
+            nom="Doe",
+            prenom="Jane",
+            date_naissance=date(2004, 1, 1),
+            sexe="F",
+            telephone="0102030405",
+            email="jane.doe@example.com",
+            commune_residence="Pobe",
+            etablissement="Lycee Test",
+            classe_niveau="TLE",
+            filiere="Scientifique",
+        )
+
+    def test_save_related_sends_email_when_checkbox_checked_and_status_changed(self):
+        statut = StatutCandidat.objects.create(candidat=self.candidat, statut="EN_ATTENTE", email_envoye=False)
+        statut.statut = "RETENU"
+        statut.email_envoye = True
+
+        fake_inline_form = SimpleNamespace(instance=statut, cleaned_data={"DELETE": False})
+        fake_formset = SimpleNamespace(model=StatutCandidat, forms=[fake_inline_form])
+
+        with patch.object(ModelAdmin, "save_related", return_value=None), patch(
+            "inscription.admin.send_decision_email"
+        ) as mocked_send, patch.object(CandidatAdmin, "message_user"):
+            self.admin.save_related(self.factory.post("/admin/"), form=None, formsets=[fake_formset], change=True)
+
+        mocked_send.assert_called_once()
+
+    def test_save_related_does_not_resend_when_already_sent_and_status_unchanged(self):
+        statut = StatutCandidat.objects.create(candidat=self.candidat, statut="RETENU", email_envoye=True)
+        fake_inline_form = SimpleNamespace(instance=statut, cleaned_data={"DELETE": False})
+        fake_formset = SimpleNamespace(model=StatutCandidat, forms=[fake_inline_form])
+
+        with patch.object(ModelAdmin, "save_related", return_value=None), patch(
+            "inscription.admin.send_decision_email"
+        ) as mocked_send, patch.object(CandidatAdmin, "message_user"):
+            self.admin.save_related(self.factory.post("/admin/"), form=None, formsets=[fake_formset], change=True)
+
+        mocked_send.assert_not_called()
+
+
+class StatutCandidatAdminEmailTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin = StatutCandidatAdmin(StatutCandidat, aftec_admin_site)
+        self.candidat = Candidat.objects.create(
+            nom="Roe",
+            prenom="John",
+            date_naissance=date(2003, 5, 8),
+            sexe="M",
+            telephone="0101010101",
+            email="john.roe@example.com",
+            commune_residence="Pobe",
+            etablissement="Lycee Test",
+            classe_niveau="TLE",
+            filiere="Scientifique",
+        )
+
+    def test_save_model_sends_email_when_checked(self):
+        statut = StatutCandidat.objects.create(candidat=self.candidat, statut="EN_ATTENTE", email_envoye=False)
+        statut.statut = "RETENU"
+        statut.email_envoye = True
+
+        with patch("inscription.admin.send_decision_email") as mocked_send, patch.object(
+            StatutCandidatAdmin, "message_user"
+        ):
+            self.admin.save_model(self.factory.post("/admin/"), statut, form=None, change=True)
+
+        mocked_send.assert_called_once()

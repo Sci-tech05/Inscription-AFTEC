@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | AFTEC 2026 Admin{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<a class="aftec-brand" href="{% url 'admin:index' %}">
+  <img src="{% static 'img/logo-aftec.png' %}" alt="AFTEC">
+  <span>AFTEC 2026 Administration</span>
+</a>
+{% endblock %}
+
+{% block usertools %}
+{% if has_permission %}
+<div id="user-tools" class="aftec-user-tools">
+  <span class="aftec-welcome">Bienvenue, <strong>{% firstof user.get_short_name user.get_username %}</strong></span>
+  {% if site_url %}
+    <a href="{{ site_url }}">Voir le site</a>
+  {% endif %}
+  {% if user.has_usable_password %}
+    <a href="{% url 'admin:password_change' %}">Modifier le mot de passe</a>
+  {% endif %}
+  <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+    {% csrf_token %}
+    <button type="submit">Déconnexion</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}
+<nav class="aftec-top-nav" aria-label="Navigation admin">
+  <a href="{% url 'admin:index' %}">Dashboard</a>
+  <a href="{% url 'admin:inscription_candidat_changelist' %}">Candidats</a>
+  <a href="{% url 'admin:inscription_statutcandidat_changelist' %}">Statuts</a>
+  <a href="{% url 'admin:inscription_quizquestion_changelist' %}">Quiz questions</a>
+  <a href="{% url 'admin:inscription_documents_changelist' %}">Documents</a>
+</nav>
+{% endblock %}
+
+{% block nav-breadcrumbs %}
+{% if not is_popup %}
+  <div class="aftec-crumbs">
+    <a href="{% url 'admin:index' %}">Accueil</a>
+    {% if title %}
+      <span aria-hidden="true">›</span>
+      <span>{{ title }}</span>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block footer %}
+<div class="aftec-footer">
+  AFTEC 2026 Admin • KcoMat
+</div>
+{% endblock %}

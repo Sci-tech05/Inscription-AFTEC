@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import json
@@ -17,6 +17,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
@@ -434,24 +435,9 @@ class AFTECAdminSite(AdminSite):
                 name="CellText",
                 parent=styles["Normal"],
                 textColor=colors.HexColor("#1F2A37"),
-                fontSize=8.6,
+                fontSize=8.7,
                 leading=10.6,
-            )
-        )
-        styles.add(
-            ParagraphStyle(
-                name="CellTextBold",
-                parent=styles["CellText"],
-                fontName="Helvetica-Bold",
-            )
-        )
-        styles.add(
-            ParagraphStyle(
-                name="CellTextMuted",
-                parent=styles["CellText"],
-                textColor=colors.HexColor("#4F5F73"),
-                fontSize=8.1,
-                leading=9.6,
+                alignment=1,
             )
         )
 
@@ -515,26 +501,15 @@ class AFTECAdminSite(AdminSite):
             )
         )
 
-        table_data = [["#", "Dossier", "Nom complet", "Niveau", "Quiz", "Score global", "Contact"]]
+        table_data = [["#", "Nom et Prenoms", "Niveau", "Contact"]]
         for idx, statut in enumerate(retenus, start=1):
             candidat = statut.candidat
-            quiz = getattr(candidat, "quiz", None)
-            dossier = (candidat.numero_dossier or "-").replace("-", "-<br/>", 1)
             table_data.append(
                 [
-                    Paragraph(str(idx), styles["CellText"]),
-                    Paragraph(f"<b>{dossier}</b>", styles["CellText"]),
-                    Paragraph(
-                        f"<b>{candidat.nom_complet}</b><br/><font color='#4F5F73'>{candidat.email}</font>",
-                        styles["CellText"],
-                    ),
-                    Paragraph(candidat.get_classe_niveau_display(), styles["CellText"]),
-                    Paragraph(f"{getattr(quiz, 'score_total', 0)}/30", styles["CellTextBold"]),
-                    Paragraph(f"{statut.score_global_selection:.2f}/100", styles["CellTextBold"]),
-                    Paragraph(
-                        f"<b>{candidat.telephone}</b><br/><font color='#4F5F73'>{candidat.commune_residence}</font>",
-                        styles["CellText"],
-                    ),
+                    str(idx),
+                    candidat.nom_complet,
+                    candidat.get_classe_niveau_display(),
+                    candidat.telephone,
                 ]
             )
 
@@ -542,18 +517,38 @@ class AFTECAdminSite(AdminSite):
             table_data.append(
                 [
                     "-",
-                    "-",
                     "Aucun candidat retenu pour le moment.",
-                    "-",
-                    "-",
                     "-",
                     "-",
                 ]
             )
 
+        def _compute_col_widths(rows, available_width):
+            min_widths = [0.9 * cm, 5.8 * cm, 2.8 * cm, 3.3 * cm]
+            max_widths = [1.4 * cm, 9.2 * cm, 4.3 * cm, 5.2 * cm]
+            widths = []
+            for col_idx in range(len(rows[0])):
+                max_text = max(str(r[col_idx]) for r in rows)
+                font_name = "Helvetica-Bold" if col_idx == 0 else "Helvetica"
+                text_width = pdfmetrics.stringWidth(max_text, font_name, 8.7) + 14
+                widths.append(max(min_widths[col_idx], min(max_widths[col_idx], text_width)))
+
+            total = sum(widths)
+            if total < available_width:
+                extra = available_width - total
+                flex_indexes = [1, 3, 2]
+                flex_total = sum(widths[i] for i in flex_indexes)
+                for i in flex_indexes:
+                    widths[i] += extra * (widths[i] / flex_total)
+            elif total > available_width:
+                ratio = available_width / total
+                widths = [w * ratio for w in widths]
+            return widths
+
+        table_width = A4[0] - doc.leftMargin - doc.rightMargin
         retenus_table = Table(
             table_data,
-            colWidths=[0.8 * cm, 2.2 * cm, 4.9 * cm, 2.1 * cm, 1.6 * cm, 2.2 * cm, 4.0 * cm],
+            colWidths=_compute_col_widths(table_data, table_width),
             repeatRows=1,
             hAlign="LEFT",
         )
@@ -564,10 +559,8 @@ class AFTECAdminSite(AdminSite):
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, 0), 8.8),
-                    ("ALIGN", (0, 0), (1, -1), "CENTER"),
-                    ("ALIGN", (3, 1), (5, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-                    ("VALIGN", (0, 1), (-1, -1), "TOP"),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#F8FAFD"), colors.HexColor("#EEF3FA")]),
                     ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#1F2A37")),
                     ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
@@ -680,6 +673,10 @@ class AFTECAdminSite(AdminSite):
 
 
 aftec_admin_site = AFTECAdminSite(name="aftec_admin")
+Documents._meta.verbose_name = "Document"
+Documents._meta.verbose_name_plural = "Documents"
+NotesAcademiques._meta.verbose_name = "Note academique"
+NotesAcademiques._meta.verbose_name_plural = "Notes academiques"
 aftec_admin_site.register(Candidat, CandidatAdmin)
 aftec_admin_site.register(NotesAcademiques)
 aftec_admin_site.register(Documents)

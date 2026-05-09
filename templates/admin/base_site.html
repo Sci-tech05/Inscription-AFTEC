@@ -48,16 +48,7 @@
 {% endif %}
 {% endblock %}
 
-{% block nav-sidebar %}
-<nav class="aftec-side-nav" aria-label="Navigation admin">
-  <h2>Navigation</h2>
-  <a href="{% url 'admin:index' %}">Dashboard</a>
-  <a href="{% url 'admin:inscription_candidat_changelist' %}">Candidats</a>
-  <a href="{% url 'admin:inscription_statutcandidat_changelist' %}">Statuts</a>
-  <a href="{% url 'admin:inscription_documents_changelist' %}">Documents</a>
-  <a class="aftec-side-nav-cta" href="{% url 'admin:retained_candidates_pdf' %}">Télécharger PDF Retenus</a>
-</nav>
-{% endblock %}
+{% block nav-sidebar %}{% endblock %}
 
 {% block footer %}
 <div class="aftec-footer">

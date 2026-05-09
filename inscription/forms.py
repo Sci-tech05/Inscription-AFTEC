@@ -5,7 +5,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Candidat, QuizQuestion
+from .models import Candidat, NotesAcademiques, QuizQuestion
 
 
 class DateInput(forms.DateInput):
@@ -14,6 +14,7 @@ class DateInput(forms.DateInput):
 
 class InscriptionMultiStepForm(forms.Form):
     HIGHER_LEVEL_CLASSES = {"L1", "L2", "L3", "M1", "M2"}
+    PROFESSIONAL_CLASS = "AUTRE"
 
     # Etape 1 : Consentements
     consent_donnees_personnelles = forms.BooleanField(required=True, label="J'accepte le traitement de mes données personnelles")
@@ -39,22 +40,62 @@ class InscriptionMultiStepForm(forms.Form):
     filiere = forms.CharField(max_length=120)
 
     # Etape 3 : Notes
-    moyenne_generale_an1 = forms.DecimalField(min_value=0, max_value=20, decimal_places=2)
-    moyenne_generale_an2 = forms.DecimalField(min_value=0, max_value=20, decimal_places=2)
-    moyenne_maths_an1 = forms.DecimalField(min_value=0, max_value=20, decimal_places=2, required=False)
-    moyenne_maths_an2 = forms.DecimalField(min_value=0, max_value=20, decimal_places=2, required=False)
-    moyenne_physique_an1 = forms.DecimalField(min_value=0, max_value=20, decimal_places=2, required=False)
-    moyenne_physique_an2 = forms.DecimalField(min_value=0, max_value=20, decimal_places=2, required=False)
-    appreciation_generale = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    moyenne_generale_an1 = forms.DecimalField(
+        min_value=0,
+        max_value=20,
+        decimal_places=2,
+        label="Moyenne générale Année passée",
+    )
+    moyenne_generale_an2 = forms.DecimalField(
+        min_value=0,
+        max_value=20,
+        decimal_places=2,
+        label="Moyenne générale S1 Année actuel",
+    )
+    moyenne_maths_an1 = forms.DecimalField(
+        min_value=0,
+        max_value=20,
+        decimal_places=2,
+        required=False,
+        label="Moyenne maths Semestre 1",
+    )
+    moyenne_maths_an2 = forms.DecimalField(
+        min_value=0,
+        max_value=20,
+        decimal_places=2,
+        required=False,
+        label="Moyenne maths Semestre 2",
+    )
+    moyenne_physique_an1 = forms.DecimalField(
+        min_value=0,
+        max_value=20,
+        decimal_places=2,
+        required=False,
+        label="Moyenne physique Semestre 1",
+    )
+    moyenne_physique_an2 = forms.DecimalField(
+        min_value=0,
+        max_value=20,
+        decimal_places=2,
+        required=False,
+        label="Moyenne physique Semestre 2",
+    )
+    diplome_plus_eleve = forms.ChoiceField(
+        choices=(("", "Sélectionnez un diplôme"), *NotesAcademiques.DIPLOMA_CHOICES),
+        required=False,
+        label="Diplôme le plus élevé",
+    )
+    attestation_diplome = forms.FileField(required=False, label="Attestation du diplôme")
+    dernier_releve_notes = forms.FileField(required=False, label="Dernier relevé de notes")
 
     # Etape 4 : Lettre de motivation
     lettre_motivation = forms.FileField(required=True)
 
     # Etape 5 : Documents
     piece_identite = forms.FileField(required=True)
-    bulletin_an1 = forms.FileField(required=True)
-    bulletin_an2 = forms.FileField(required=True)
-    lettre_recommandation = forms.FileField(required=False)
+    bulletin_an1 = forms.FileField(required=False, label="Bulletin Année passée")
+    bulletin_an2 = forms.FileField(required=False, label="Bulletin S1 année actuelle")
+    lettre_recommandation = forms.FileField(required=False, label="Lettre recommandation (facultative)")
     autorisation_parentale = forms.FileField(required=False)
 
     def __init__(self, *args, **kwargs):
@@ -117,7 +158,39 @@ class InscriptionMultiStepForm(forms.Form):
             if not cleaned_data.get(field_name):
                 self.add_error(field_name, "Ce consentement est obligatoire.")
 
-        if classe_niveau in self.HIGHER_LEVEL_CLASSES:
+        is_professional = classe_niveau == self.PROFESSIONAL_CLASS
+
+        if is_professional:
+            required_professional_fields = [
+                "diplome_plus_eleve",
+                "attestation_diplome",
+                "dernier_releve_notes",
+            ]
+            for field_name in required_professional_fields:
+                if not cleaned_data.get(field_name):
+                    self.add_error(field_name, "Ce champ est obligatoire pour les professionnels.")
+
+            for field_name in [
+                "moyenne_generale_an1",
+                "moyenne_generale_an2",
+                "moyenne_maths_an1",
+                "moyenne_maths_an2",
+                "moyenne_physique_an1",
+                "moyenne_physique_an2",
+            ]:
+                cleaned_data[field_name] = None
+
+            cleaned_data["bulletin_an1"] = None
+            cleaned_data["bulletin_an2"] = None
+        elif classe_niveau in self.HIGHER_LEVEL_CLASSES:
+            required_general_scores = [
+                "moyenne_generale_an1",
+                "moyenne_generale_an2",
+            ]
+            for field_name in required_general_scores:
+                if cleaned_data.get(field_name) is None:
+                    self.add_error(field_name, "Cette moyenne est obligatoire pour ce niveau.")
+
             if cleaned_data.get("moyenne_maths_an1") is None:
                 cleaned_data["moyenne_maths_an1"] = cleaned_data.get("moyenne_generale_an1")
             if cleaned_data.get("moyenne_maths_an2") is None:
@@ -127,6 +200,14 @@ class InscriptionMultiStepForm(forms.Form):
             if cleaned_data.get("moyenne_physique_an2") is None:
                 cleaned_data["moyenne_physique_an2"] = cleaned_data.get("moyenne_generale_an2")
         else:
+            required_general_scores = [
+                "moyenne_generale_an1",
+                "moyenne_generale_an2",
+            ]
+            for field_name in required_general_scores:
+                if cleaned_data.get(field_name) is None:
+                    self.add_error(field_name, "Cette moyenne est obligatoire pour ce niveau.")
+
             required_scores = [
                 "moyenne_maths_an1",
                 "moyenne_maths_an2",
@@ -136,6 +217,12 @@ class InscriptionMultiStepForm(forms.Form):
             for field_name in required_scores:
                 if cleaned_data.get(field_name) is None:
                     self.add_error(field_name, "Cette moyenne est obligatoire pour ce niveau.")
+
+        if not is_professional:
+            if not cleaned_data.get("bulletin_an1"):
+                self.add_error("bulletin_an1", "Ce document est obligatoire pour ce niveau.")
+            if not cleaned_data.get("bulletin_an2"):
+                self.add_error("bulletin_an2", "Ce document est obligatoire pour ce niveau.")
 
         if date_naissance:
             is_minor = self._age(date_naissance) < 18

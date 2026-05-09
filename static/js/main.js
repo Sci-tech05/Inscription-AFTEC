@@ -64,31 +64,92 @@
     const communeWarning = document.getElementById('communeWarning');
     const classeNiveauInput = document.getElementById('id_classe_niveau');
     const higherLevelHint = document.getElementById('higherLevelHint');
+    const academicGeneralBlocks = Array.from(document.querySelectorAll('.academic-general'));
     const optionalMathPhysicsBlocks = Array.from(document.querySelectorAll('.optional-math-physics'));
+    const professionalBlocks = Array.from(document.querySelectorAll('.professional-only'));
+    const professionalBulletinBlocks = Array.from(document.querySelectorAll('.professional-bulletin'));
+    const diplomeSelect = document.getElementById('id_diplome_plus_eleve');
+    const attestationDiplomeInput = document.getElementById('id_attestation_diplome');
+    const dernierReleveInput = document.getElementById('id_dernier_releve_notes');
+    const bulletinAn1Input = document.getElementById('id_bulletin_an1');
+    const bulletinAn2Input = document.getElementById('id_bulletin_an2');
+    const quizPane = document.querySelector('.step-pane[data-step="6"]');
+    const quizTabButtons = Array.from(document.querySelectorAll('#quizTabs button[data-bs-target]'));
+    const timerEl = document.getElementById('quizTimer');
 
     const STORAGE_KEY = 'aftec2026_form';
     const HIGHER_LEVELS = new Set(['L1', 'L2', 'L3', 'M1', 'M2']);
+    const PROFESSIONAL_LEVEL = 'AUTRE';
     let currentStep = 1;
+    let quizTimerSeconds = 0;
+    let quizTimerInterval = null;
 
     function isHigherLevel() {
         return HIGHER_LEVELS.has((classeNiveauInput?.value || '').trim());
     }
 
+    function isProfessionalLevel() {
+        return (classeNiveauInput?.value || '').trim() === PROFESSIONAL_LEVEL;
+    }
+
     function updateAcademicFieldsByLevel() {
+        const isProfessional = isProfessionalLevel();
         const higherLevel = isHigherLevel();
-        optionalMathPhysicsBlocks.forEach((block) => {
-            block.classList.toggle('d-none', higherLevel);
+
+        academicGeneralBlocks.forEach((block) => {
+            block.classList.toggle('d-none', isProfessional);
             const input = block.querySelector('input');
             if (!input) return;
-            input.required = !higherLevel;
-            input.disabled = higherLevel;
-            if (higherLevel) {
+            input.required = !isProfessional;
+            input.disabled = isProfessional;
+            if (isProfessional) {
                 input.value = '';
             }
         });
 
+        optionalMathPhysicsBlocks.forEach((block) => {
+            const hideField = isProfessional || higherLevel;
+            block.classList.toggle('d-none', hideField);
+            const input = block.querySelector('input');
+            if (!input) return;
+            input.required = !hideField;
+            input.disabled = hideField;
+            if (hideField) {
+                input.value = '';
+            }
+        });
+
+        professionalBlocks.forEach((block) => {
+            block.classList.toggle('d-none', !isProfessional);
+            block.querySelectorAll('input, select').forEach((input) => {
+                input.disabled = !isProfessional;
+            });
+        });
+
+        if (diplomeSelect) {
+            diplomeSelect.required = isProfessional;
+        }
+        if (attestationDiplomeInput) {
+            attestationDiplomeInput.required = isProfessional;
+        }
+        if (dernierReleveInput) {
+            dernierReleveInput.required = isProfessional;
+        }
+
+        professionalBulletinBlocks.forEach((block) => {
+            block.classList.toggle('d-none', isProfessional);
+        });
+        if (bulletinAn1Input) {
+            bulletinAn1Input.required = !isProfessional;
+            bulletinAn1Input.disabled = isProfessional;
+        }
+        if (bulletinAn2Input) {
+            bulletinAn2Input.required = !isProfessional;
+            bulletinAn2Input.disabled = isProfessional;
+        }
+
         if (higherLevelHint) {
-            higherLevelHint.classList.toggle('d-none', !higherLevel);
+            higherLevelHint.classList.toggle('d-none', !higherLevel || isProfessional);
         }
     }
 
@@ -284,10 +345,10 @@
     }
 
     function findFirstIncompleteQuizGroup() {
-        const quizPane = document.querySelector('.step-pane[data-step="6"]');
         if (!quizPane) return null;
         const groups = new Map();
         quizPane.querySelectorAll('input[type="radio"]').forEach((radio) => {
+            if (radio.disabled) return;
             if (!groups.has(radio.name)) {
                 groups.set(radio.name, radio);
             }
@@ -298,6 +359,57 @@
             }
         }
         return null;
+    }
+
+    function showToast(message, duration = 2500) {
+        const toast = document.createElement('div');
+        toast.className = 'alert alert-warning position-fixed top-0 end-0 m-3';
+        toast.style.zIndex = '2000';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), duration);
+    }
+
+    function showIncompleteQuizTarget(radio) {
+        if (!radio) return;
+        const targetPane = radio.closest('.tab-pane');
+        if (targetPane && targetPane.id) {
+            const tabButton = document.querySelector(`#quizTabs button[data-bs-target="#${targetPane.id}"]`);
+            if (tabButton) {
+                bootstrap.Tab.getOrCreateInstance(tabButton).show();
+            }
+        }
+
+        const quizCard = radio.closest('.quiz-question');
+        if (quizCard) {
+            quizCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function updateFinalStepActions() {
+        if (currentStep !== panes.length) {
+            nextBtn.classList.remove('d-none');
+            submitBtn.classList.add('d-none');
+            return;
+        }
+
+        const allAnswered = !findFirstIncompleteQuizGroup();
+        nextBtn.classList.toggle('d-none', allAnswered);
+        submitBtn.classList.toggle('d-none', !allAnswered);
+    }
+
+    function goToNextQuizTabOrIncomplete() {
+        if (!quizTabButtons.length) return;
+        const activeIndex = quizTabButtons.findIndex((btn) => btn.classList.contains('active'));
+        if (activeIndex >= 0 && activeIndex < quizTabButtons.length - 1) {
+            bootstrap.Tab.getOrCreateInstance(quizTabButtons[activeIndex + 1]).show();
+            return;
+        }
+
+        const firstIncomplete = findFirstIncompleteQuizGroup();
+        if (firstIncomplete) {
+            showIncompleteQuizTarget(firstIncomplete);
+        }
     }
 
     function showStep(step) {
@@ -311,20 +423,19 @@
         progressBar.style.width = `${pct}%`;
         progressPercent.textContent = `${pct}%`;
         currentStepLabel.textContent = `${step}`;
-
-        const isLast = step === panes.length;
-        nextBtn.classList.toggle('d-none', isLast);
-        submitBtn.classList.toggle('d-none', !isLast);
+        updateFinalStepActions();
+        if (step === panes.length) {
+            startQuizTimer();
+        }
     }
 
-    function initTimer() {
-        const timerEl = document.getElementById('quizTimer');
+    function startQuizTimer() {
         if (!timerEl) return;
-        let seconds = 0;
-        setInterval(() => {
-            seconds += 1;
-            const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
-            const ss = String(seconds % 60).padStart(2, '0');
+        if (quizTimerInterval) return;
+        quizTimerInterval = setInterval(() => {
+            quizTimerSeconds += 1;
+            const mm = String(Math.floor(quizTimerSeconds / 60)).padStart(2, '0');
+            const ss = String(quizTimerSeconds % 60).padStart(2, '0');
             timerEl.textContent = `Temps indicatif : ${mm}:${ss}`;
         }, 1000);
     }
@@ -334,23 +445,27 @@
     updateEligibilityIndicators();
     updateScoreMeters();
     updateDocumentBadges();
-    initTimer();
+    if (timerEl) {
+        timerEl.textContent = 'Temps indicatif : 0:0';
+    }
     showStep(1);
-
     nextBtn.addEventListener('click', () => {
+        if (currentStep === panes.length) {
+            const firstIncomplete = findFirstIncompleteQuizGroup();
+            if (firstIncomplete) {
+                goToNextQuizTabOrIncomplete();
+                showToast('Complétez toutes les sections du quiz pour activer la soumission.', 2800);
+            }
+            return;
+        }
+
         if (!validateStep(currentStep)) {
-            const toast = document.createElement('div');
-            toast.className = 'alert alert-warning position-fixed top-0 end-0 m-3';
-            toast.style.zIndex = '2000';
-            toast.textContent = 'Veuillez compléter correctement cette étape avant de continuer.';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2500);
+            showToast('Veuillez compléter correctement cette étape avant de continuer.');
             return;
         }
         saveDraft();
         showStep(Math.min(panes.length, currentStep + 1));
     });
-
     prevBtn.addEventListener('click', () => {
         showStep(Math.max(1, currentStep - 1));
     });
@@ -358,6 +473,7 @@
     form.addEventListener('input', () => {
         updateEligibilityIndicators();
         updateScoreMeters();
+        updateFinalStepActions();
         saveDraft();
     });
 
@@ -365,6 +481,7 @@
         updateAcademicFieldsByLevel();
         updateEligibilityIndicators();
         updateDocumentBadges();
+        updateFinalStepActions();
         saveDraft();
     });
 
@@ -373,30 +490,11 @@
         if (firstIncomplete) {
             event.preventDefault();
             showStep(6);
-
-            const targetPane = firstIncomplete.closest('.tab-pane');
-            if (targetPane && targetPane.id) {
-                const tabButton = document.querySelector(`#quizTabs button[data-bs-target="#${targetPane.id}"]`);
-                if (tabButton) {
-                    const tab = new bootstrap.Tab(tabButton);
-                    tab.show();
-                }
-            }
-
-            const quizCard = firstIncomplete.closest('.quiz-question');
-            if (quizCard) {
-                quizCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-
-            const toast = document.createElement('div');
-            toast.className = 'alert alert-warning position-fixed top-0 end-0 m-3';
-            toast.style.zIndex = '2000';
-            toast.textContent = 'Veuillez répondre à toutes les questions du quiz avant de soumettre.';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3500);
+            showIncompleteQuizTarget(firstIncomplete);
+            showToast('Veuillez repondre a toutes les questions du quiz avant de soumettre.', 3500);
             return;
         }
-
         sessionStorage.removeItem(STORAGE_KEY);
     });
 })();
+

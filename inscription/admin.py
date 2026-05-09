@@ -79,6 +79,8 @@ class DocumentsInline(admin.StackedInline):
         "bulletin_an2_link",
         "lettre_motivation_link",
         "lettre_recommandation_link",
+        "attestation_diplome_link",
+        "dernier_releve_notes_link",
         "autorisation_parentale_link",
     )
 
@@ -93,6 +95,10 @@ class DocumentsInline(admin.StackedInline):
         "lettre_motivation_link",
         "lettre_recommandation",
         "lettre_recommandation_link",
+        "attestation_diplome",
+        "attestation_diplome_link",
+        "dernier_releve_notes",
+        "dernier_releve_notes_link",
         "autorisation_parentale",
         "autorisation_parentale_link",
     )
@@ -117,6 +123,12 @@ class DocumentsInline(admin.StackedInline):
 
     def lettre_recommandation_link(self, obj):
         return self._file_link(obj.lettre_recommandation)
+
+    def attestation_diplome_link(self, obj):
+        return self._file_link(obj.attestation_diplome)
+
+    def dernier_releve_notes_link(self, obj):
+        return self._file_link(obj.dernier_releve_notes)
 
     def autorisation_parentale_link(self, obj):
         return self._file_link(obj.autorisation_parentale)

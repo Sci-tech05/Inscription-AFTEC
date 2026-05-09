@@ -327,20 +327,53 @@ input, select, textarea {
   .aftec-brand {
     font-size: 1.2rem;
   }
+  #header {
+    padding: 10px 12px;
+  }
+  #header,
+  #header #branding,
+  #header #user-tools {
+    float: none;
+  }
+  .aftec-user-tools {
+    width: 100%;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
   #main {
     padding: 12px;
   }
   .main {
+    display: flex;
+    flex-direction: column;
     gap: 12px;
+  }
+  #content-start.content,
+  #content,
+  .content,
+  #content-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0;
+    margin-left: 0 !important;
   }
   .aftec-module-nav#nav-sidebar {
     position: static;
     max-height: none;
     width: 100%;
     flex-basis: 100%;
+    flex: 1 1 auto;
   }
   body:not(.aftec-dashboard) .main > #nav-sidebar.aftec-module-nav + .content {
     max-width: 100%;
+  }
+  #changelist {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #changelist table {
+    min-width: 640px;
   }
   .aftec-module-row {
     flex-direction: column;
@@ -354,5 +387,60 @@ input, select, textarea {
 @media (max-width: 767px) {
   body:not(.aftec-dashboard) #nav-sidebar.aftec-module-nav {
     display: block;
+  }
+}
+
+@media (max-width: 359.98px) {
+  #header {
+    padding: 8px 10px;
+  }
+  .aftec-brand {
+    font-size: 0.98rem;
+    gap: 6px;
+  }
+  .aftec-brand img {
+    width: 72px;
+    height: 34px;
+    padding: 2px;
+  }
+  .aftec-user-tools {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    font-size: 0.82rem;
+  }
+  .aftec-crumbs {
+    padding: 8px 10px;
+    font-size: 0.84rem;
+  }
+  #main {
+    padding: 8px;
+  }
+  #content {
+    padding: 9px;
+    border-radius: 10px;
+  }
+  .aftec-module-nav__head {
+    padding: 11px 12px;
+  }
+  .aftec-module-nav__body {
+    padding: 11px;
+  }
+  .aftec-module-app h3 {
+    font-size: 0.86rem;
+  }
+  .aftec-module-row {
+    padding: 8px 9px;
+  }
+  .aftec-module-actions {
+    width: 100%;
+    gap: 6px;
+  }
+  .aftec-module-actions a {
+    font-size: 0.74rem;
+    padding: 3px 7px;
+  }
+  #changelist table {
+    min-width: 560px;
   }
 }

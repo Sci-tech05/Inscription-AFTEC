@@ -40,7 +40,7 @@ class Candidat(models.Model):
         ("L3", "Licence 3"),
         ("M1", "Master 1"),
         ("M2", "Master 2"),
-        ("AUTRE", "Autre"),
+        ("AUTRE", "Professionnel"),
     )
 
     nom = models.CharField(max_length=120)
@@ -96,14 +96,25 @@ class Candidat(models.Model):
 
 
 class NotesAcademiques(models.Model):
+    DIPLOMA_CHOICES = (
+        ("CEP", "CEP"),
+        ("BEPC", "BEPC"),
+        ("CAP", "CAP"),
+        ("DTI", "DTI"),
+        ("BAC", "BAC"),
+        ("DUT", "DUT"),
+        ("LICENCE", "LICENCE"),
+        ("MASTER", "MASTER"),
+    )
+
     candidat = models.OneToOneField(Candidat, on_delete=models.CASCADE, related_name="notes")
-    moyenne_generale_an1 = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(20)])
-    moyenne_generale_an2 = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(20)])
-    moyenne_maths_an1 = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(20)])
-    moyenne_maths_an2 = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(20)])
-    moyenne_physique_an1 = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(20)])
-    moyenne_physique_an2 = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(20)])
-    appreciation_generale = models.TextField(blank=True)
+    moyenne_generale_an1 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    moyenne_generale_an2 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    moyenne_maths_an1 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    moyenne_maths_an2 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    moyenne_physique_an1 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    moyenne_physique_an2 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)])
+    diplome_plus_eleve = models.CharField(max_length=20, choices=DIPLOMA_CHOICES, blank=True)
 
     def __str__(self):
         return f"Notes de {self.candidat.nom_complet}"
@@ -112,15 +123,33 @@ class NotesAcademiques(models.Model):
 class Documents(models.Model):
     candidat = models.OneToOneField(Candidat, on_delete=models.CASCADE, related_name="documents")
     piece_identite = models.FileField(upload_to="documents/pieces/", validators=[validate_file_extension, validate_file_size])
-    bulletin_an1 = models.FileField(upload_to="documents/bulletins/", validators=[validate_file_extension, validate_file_size])
-    bulletin_an2 = models.FileField(upload_to="documents/bulletins/", validators=[validate_file_extension, validate_file_size])
+    bulletin_an1 = models.FileField(upload_to="documents/bulletins/", blank=True, validators=[validate_file_extension, validate_file_size])
+    bulletin_an2 = models.FileField(upload_to="documents/bulletins/", blank=True, validators=[validate_file_extension, validate_file_size])
     lettre_motivation = models.FileField(upload_to="documents/motivation/", validators=[validate_file_extension, validate_file_size])
     lettre_recommandation = models.FileField(upload_to="documents/recommandation/", blank=True, validators=[validate_file_extension, validate_file_size])
+    attestation_diplome = models.FileField(upload_to="documents/diplomes/", blank=True, validators=[validate_file_extension, validate_file_size])
+    dernier_releve_notes = models.FileField(upload_to="documents/releves/", blank=True, validators=[validate_file_extension, validate_file_size])
     autorisation_parentale = models.FileField(upload_to="documents/autorisation/", blank=True, validators=[validate_file_extension, validate_file_size])
 
     def clean(self):
+        errors = {}
+        is_professionnel = self.candidat.classe_niveau == "AUTRE"
+        if is_professionnel:
+            if not self.attestation_diplome:
+                errors["attestation_diplome"] = "Ce document est obligatoire pour les professionnels."
+            if not self.dernier_releve_notes:
+                errors["dernier_releve_notes"] = "Ce document est obligatoire pour les professionnels."
+        else:
+            if not self.bulletin_an1:
+                errors["bulletin_an1"] = "Ce bulletin est obligatoire pour ce niveau."
+            if not self.bulletin_an2:
+                errors["bulletin_an2"] = "Ce bulletin est obligatoire pour ce niveau."
+
         if self.candidat.est_mineur and not self.autorisation_parentale:
-            raise ValidationError({"autorisation_parentale": "Une autorisation parentale est obligatoire pour les mineurs."})
+            errors["autorisation_parentale"] = "Une autorisation parentale est obligatoire pour les mineurs."
+
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return f"Documents de {self.candidat.nom_complet}"
@@ -232,8 +261,8 @@ class StatutCandidat(models.Model):
         notes = getattr(self.candidat, "notes", None)
         quiz = getattr(self.candidat, "quiz", None)
 
-        moyenne_maths_an2 = float(notes.moyenne_maths_an2) if notes else 0.0
-        moyenne_physique_an2 = float(notes.moyenne_physique_an2) if notes else 0.0
+        moyenne_maths_an2 = float(notes.moyenne_maths_an2) if notes and notes.moyenne_maths_an2 is not None else 0.0
+        moyenne_physique_an2 = float(notes.moyenne_physique_an2) if notes and notes.moyenne_physique_an2 is not None else 0.0
         score_quiz_total = float(quiz.score_total) if quiz else 0.0
         note_motivation = float(self.note_motivation or 0)
 

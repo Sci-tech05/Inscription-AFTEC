@@ -19,8 +19,12 @@
                 <div class="col-md-6"><strong>Établissement :</strong> {{ candidat.etablissement }}</div>
                 <div class="col-md-6"><strong>Classe/Niveau :</strong> {{ candidat.get_classe_niveau_display }}</div>
                 {% if notes %}
-                    <div class="col-md-6"><strong>Moyenne générale (an2) :</strong> {{ notes.moyenne_generale_an2 }}/20</div>
-                    <div class="col-md-6"><strong>Moyenne Maths (an2) :</strong> {{ notes.moyenne_maths_an2 }}/20</div>
+                    {% if candidat.classe_niveau == "AUTRE" %}
+                        <div class="col-md-6"><strong>Diplôme le plus élevé :</strong> {{ notes.diplome_plus_eleve|default:"-" }}</div>
+                    {% else %}
+                        <div class="col-md-6"><strong>Moyenne générale S1 Année actuel :</strong> {{ notes.moyenne_generale_an2 }}/20</div>
+                        <div class="col-md-6"><strong>Moyenne maths Semestre 2 :</strong> {{ notes.moyenne_maths_an2 }}/20</div>
+                    {% endif %}
                 {% endif %}
                 {% if quiz %}
                     <div class="col-md-12"><strong>Score quiz total :</strong> {{ quiz.score_total }}/30</div>

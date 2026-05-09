@@ -67,13 +67,15 @@
                 <h4>Étape 3 — Parcours académique & moyennes</h4>
                 <p class="text-muted">La sélection tient compte de vos résultats académiques.</p>
                 <div class="row g-3">
-                    <div class="col-md-6 score-field">{{ form.moyenne_generale_an1.label_tag }}{{ form.moyenne_generale_an1 }}{{ form.moyenne_generale_an1.errors }}<div class="score-meter"></div></div>
-                    <div class="col-md-6 score-field">{{ form.moyenne_generale_an2.label_tag }}{{ form.moyenne_generale_an2 }}{{ form.moyenne_generale_an2.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field academic-general">{{ form.moyenne_generale_an1.label_tag }}{{ form.moyenne_generale_an1 }}{{ form.moyenne_generale_an1.errors }}<div class="score-meter"></div></div>
+                    <div class="col-md-6 score-field academic-general">{{ form.moyenne_generale_an2.label_tag }}{{ form.moyenne_generale_an2 }}{{ form.moyenne_generale_an2.errors }}<div class="score-meter"></div></div>
                     <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_maths_an1.label_tag }}{{ form.moyenne_maths_an1 }}{{ form.moyenne_maths_an1.errors }}<div class="score-meter"></div></div>
                     <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_maths_an2.label_tag }}{{ form.moyenne_maths_an2 }}{{ form.moyenne_maths_an2.errors }}<div class="score-meter"></div></div>
                     <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_physique_an1.label_tag }}{{ form.moyenne_physique_an1 }}{{ form.moyenne_physique_an1.errors }}<div class="score-meter"></div></div>
                     <div class="col-md-6 score-field optional-math-physics">{{ form.moyenne_physique_an2.label_tag }}{{ form.moyenne_physique_an2 }}{{ form.moyenne_physique_an2.errors }}<div class="score-meter"></div></div>
-                    <div class="col-12">{{ form.appreciation_generale.label_tag }}{{ form.appreciation_generale }}{{ form.appreciation_generale.errors }}</div>
+                    <div class="col-md-6 professional-only d-none">{{ form.diplome_plus_eleve.label_tag }}{{ form.diplome_plus_eleve }}{{ form.diplome_plus_eleve.errors }}</div>
+                    <div class="col-md-6 professional-only d-none document-field">{{ form.attestation_diplome.label_tag }}{{ form.attestation_diplome }}{{ form.attestation_diplome.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 professional-only d-none document-field">{{ form.dernier_releve_notes.label_tag }}{{ form.dernier_releve_notes }}{{ form.dernier_releve_notes.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
                 </div>
             </div>
 
@@ -88,8 +90,8 @@
                 <p class="text-muted">Formats acceptés: PDF, JPG, PNG (max 5 Mo)</p>
                 <div class="row g-3">
                     <div class="col-md-6 document-field">{{ form.piece_identite.label_tag }}{{ form.piece_identite }}{{ form.piece_identite.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
-                    <div class="col-md-6 document-field">{{ form.bulletin_an1.label_tag }}{{ form.bulletin_an1 }}{{ form.bulletin_an1.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
-                    <div class="col-md-6 document-field">{{ form.bulletin_an2.label_tag }}{{ form.bulletin_an2 }}{{ form.bulletin_an2.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 document-field professional-bulletin">{{ form.bulletin_an1.label_tag }}{{ form.bulletin_an1 }}{{ form.bulletin_an1.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
+                    <div class="col-md-6 document-field professional-bulletin">{{ form.bulletin_an2.label_tag }}{{ form.bulletin_an2 }}{{ form.bulletin_an2.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
                     <div class="col-md-6 document-field">{{ form.lettre_recommandation.label_tag }}{{ form.lettre_recommandation }}{{ form.lettre_recommandation.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
                     <div class="col-md-6 document-field d-none" id="autorisationBlock">{{ form.autorisation_parentale.label_tag }}{{ form.autorisation_parentale }}{{ form.autorisation_parentale.errors }}<span class="doc-badge"></span><div class="doc-preview small mt-1"></div></div>
                 </div>
@@ -98,7 +100,7 @@
             <div class="step-pane" data-step="6">
                 <h4>Étape 6 — Quiz d'évaluation</h4>
                 <p class="text-muted">Ce quiz est un outil pour mieux vous connaître. Il n'y a pas de mauvaises réponses — répondez sincèrement.</p>
-                <div class="quiz-timer" id="quizTimer">Temps indicatif : 00:00</div>
+                <div class="quiz-timer" id="quizTimer">Temps indicatif : 0:0</div>
 
                 <div class="quiz-tabs-scroll">
                     <ul class="nav nav-tabs mb-3 flex-nowrap" id="quizTabs" role="tablist">

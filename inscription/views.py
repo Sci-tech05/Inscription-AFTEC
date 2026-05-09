@@ -99,16 +99,18 @@ def formulaire_inscription(request):
                     moyenne_maths_an2=form.cleaned_data["moyenne_maths_an2"],
                     moyenne_physique_an1=form.cleaned_data["moyenne_physique_an1"],
                     moyenne_physique_an2=form.cleaned_data["moyenne_physique_an2"],
-                    appreciation_generale=form.cleaned_data.get("appreciation_generale", ""),
+                    diplome_plus_eleve=form.cleaned_data.get("diplome_plus_eleve", ""),
                 )
 
                 Documents.objects.create(
                     candidat=candidat,
                     piece_identite=form.cleaned_data["piece_identite"],
-                    bulletin_an1=form.cleaned_data["bulletin_an1"],
-                    bulletin_an2=form.cleaned_data["bulletin_an2"],
+                    bulletin_an1=form.cleaned_data.get("bulletin_an1"),
+                    bulletin_an2=form.cleaned_data.get("bulletin_an2"),
                     lettre_motivation=form.cleaned_data["lettre_motivation"],
                     lettre_recommandation=form.cleaned_data.get("lettre_recommandation"),
+                    attestation_diplome=form.cleaned_data.get("attestation_diplome"),
+                    dernier_releve_notes=form.cleaned_data.get("dernier_releve_notes"),
                     autorisation_parentale=form.cleaned_data.get("autorisation_parentale"),
                 )
 
@@ -159,6 +161,7 @@ def confirmation(request, candidat_id):
 def confirmation_pdf(request, candidat_id):
     candidat = get_object_or_404(Candidat, pk=candidat_id)
     notes = getattr(candidat, "notes", None)
+    documents = getattr(candidat, "documents", None)
     statut = getattr(candidat, "statut", None)
 
     buffer = BytesIO()
@@ -304,14 +307,20 @@ def confirmation_pdf(request, candidat_id):
     def _note_or_dash(value):
         return f"{value}/20" if value is not None else "-"
 
-    notes_data = [
-        ["Moyenne générale (année n-1)", _note_or_dash(getattr(notes, "moyenne_generale_an1", None))],
-        ["Moyenne générale (année n)", _note_or_dash(getattr(notes, "moyenne_generale_an2", None))],
-        ["Moyenne Mathématiques (année n-1)", _note_or_dash(getattr(notes, "moyenne_maths_an1", None))],
-        ["Moyenne Mathématiques (année n)", _note_or_dash(getattr(notes, "moyenne_maths_an2", None))],
-        ["Moyenne Physique (année n-1)", _note_or_dash(getattr(notes, "moyenne_physique_an1", None))],
-        ["Moyenne Physique (année n)", _note_or_dash(getattr(notes, "moyenne_physique_an2", None))],
-    ]
+    is_professional = candidat.classe_niveau == "AUTRE"
+    if is_professional:
+        notes_data = [
+            ["Diplôme le plus élevé", getattr(notes, "diplome_plus_eleve", "") or "-"],
+        ]
+    else:
+        notes_data = [
+            ["Moyenne générale Année passée", _note_or_dash(getattr(notes, "moyenne_generale_an1", None))],
+            ["Moyenne générale S1 Année actuel", _note_or_dash(getattr(notes, "moyenne_generale_an2", None))],
+            ["Moyenne maths Semestre 1", _note_or_dash(getattr(notes, "moyenne_maths_an1", None))],
+            ["Moyenne maths Semestre 2", _note_or_dash(getattr(notes, "moyenne_maths_an2", None))],
+            ["Moyenne physique Semestre 1", _note_or_dash(getattr(notes, "moyenne_physique_an1", None))],
+            ["Moyenne physique Semestre 2", _note_or_dash(getattr(notes, "moyenne_physique_an2", None))],
+        ]
     notes_table = Table(notes_data, colWidths=[9.5 * cm, 7.3 * cm], hAlign="LEFT")
     notes_table.setStyle(
         TableStyle(
@@ -329,6 +338,53 @@ def confirmation_pdf(request, candidat_id):
         )
     )
     elements.append(notes_table)
+    elements.append(Spacer(1, 0.35 * cm))
+
+    elements.append(Paragraph("Documents joints", styles["SectionTitle"]))
+
+    def _doc_or_dash(file_field):
+        if not file_field:
+            return "-"
+        return file_field.name.split("/")[-1]
+
+    documents_data = [["Pièce d'identité", _doc_or_dash(getattr(documents, "piece_identite", None))]]
+    if is_professional:
+        documents_data.extend(
+            [
+                ["Attestation du diplôme", _doc_or_dash(getattr(documents, "attestation_diplome", None))],
+                ["Dernier relevé de notes", _doc_or_dash(getattr(documents, "dernier_releve_notes", None))],
+            ]
+        )
+    else:
+        documents_data.extend(
+            [
+                ["Bulletin Année passée", _doc_or_dash(getattr(documents, "bulletin_an1", None))],
+                ["Bulletin S1 année actuelle", _doc_or_dash(getattr(documents, "bulletin_an2", None))],
+            ]
+        )
+    documents_data.append(["Lettre recommandation (facultative)", _doc_or_dash(getattr(documents, "lettre_recommandation", None))])
+    if candidat.est_mineur:
+        documents_data.append(
+            ["Autorisation parentale", _doc_or_dash(getattr(documents, "autorisation_parentale", None))]
+        )
+
+    documents_table = Table(documents_data, colWidths=[7.4 * cm, 9.4 * cm], hAlign="LEFT")
+    documents_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F6F9FE")),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D4DDE9")),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#162742")),
+                ("TEXTCOLOR", (1, 0), (1, -1), colors.HexColor("#223143")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    elements.append(documents_table)
     elements.append(Spacer(1, 0.35 * cm))
 
     elements.append(Paragraph("Situation du dossier", styles["SectionTitle"]))

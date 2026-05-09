@@ -3,6 +3,7 @@
 import csv
 import json
 from datetime import date, timedelta
+from io import BytesIO
 
 from django.contrib import admin, messages
 from django.contrib.admin import AdminSite
@@ -10,9 +11,16 @@ from django.conf import settings
 from django.db.models import Avg, Count
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse
+from django.urls import path
 from django.utils.html import format_html
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import Image as RLImage
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from .models import Candidat, Consentement, Documents, NotesAcademiques, QuizQuestion, QuizReponse, StatutCandidat
+from .models import Candidat, Consentement, Documents, NotesAcademiques, QuizReponse, StatutCandidat
 from .services import send_decision_email
 
 
@@ -365,6 +373,198 @@ class AFTECAdminSite(AdminSite):
     login_template = "admin/custom_login.html"
     enable_nav_sidebar = True
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "exports/candidats-retenus/pdf/",
+                self.admin_view(self.export_retenus_pdf),
+                name="retained_candidates_pdf",
+            )
+        ]
+        return custom_urls + urls
+
+    def export_retenus_pdf(self, request):
+        retenus = (
+            StatutCandidat.objects.select_related("candidat", "candidat__quiz")
+            .filter(statut="RETENU")
+            .order_by("-score_global_selection", "candidat__nom", "candidat__prenom")
+        )
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=1.1 * cm,
+            leftMargin=1.1 * cm,
+            topMargin=1.0 * cm,
+            bottomMargin=1.1 * cm,
+        )
+        styles = getSampleStyleSheet()
+        styles.add(
+            ParagraphStyle(
+                name="HeaderTitle",
+                parent=styles["Heading1"],
+                textColor=colors.white,
+                fontName="Helvetica-Bold",
+                fontSize=15.5,
+                leading=18,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="HeaderSubtitle",
+                parent=styles["Normal"],
+                textColor=colors.HexColor("#E8F1FF"),
+                fontSize=9.2,
+                leading=11.5,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="BodyMuted",
+                parent=styles["Normal"],
+                textColor=colors.HexColor("#5C6470"),
+                fontSize=9.2,
+                leading=11.5,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="CellText",
+                parent=styles["Normal"],
+                textColor=colors.HexColor("#1F2A37"),
+                fontSize=8.6,
+                leading=10.6,
+            )
+        )
+
+        def _fit_logo(path_obj, max_width_cm, max_height_cm):
+            if not path_obj.exists():
+                return ""
+            logo = RLImage(str(path_obj))
+            max_w = max_width_cm * cm
+            max_h = max_height_cm * cm
+            ratio = min(max_w / float(logo.imageWidth), max_h / float(logo.imageHeight))
+            logo.drawWidth = float(logo.imageWidth) * ratio
+            logo.drawHeight = float(logo.imageHeight) * ratio
+            logo.hAlign = "CENTER"
+            return logo
+
+        logo_aftec = settings.BASE_DIR / "static" / "img" / "logo-aftec.png"
+        logo_kcomat = settings.BASE_DIR / "static" / "img" / "logo-kcomat.jpeg"
+        left_logo = _fit_logo(logo_aftec, 3.8, 1.6)
+        right_logo = _fit_logo(logo_kcomat, 4.8, 1.6)
+
+        elements = []
+        header_text = [
+            Paragraph("LISTE OFFICIELLE DES CANDIDATS RETENUS", styles["HeaderTitle"]),
+            Paragraph("AFTEC 2026 | Session du 03 au 21 Août 2026 | Pobè, Bénin", styles["HeaderSubtitle"]),
+            Paragraph(f"Date d'édition: {date.today().strftime('%d/%m/%Y')}", styles["HeaderSubtitle"]),
+            Paragraph(f"Total retenus: <b>{retenus.count()}</b>", styles["HeaderSubtitle"]),
+        ]
+        header_table = Table(
+            [[left_logo, header_text, right_logo]],
+            colWidths=[3.8 * cm, 11.0 * cm, 4.0 * cm],
+            hAlign="LEFT",
+        )
+        header_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0E2A47")),
+                    ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#0A2039")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("ROUNDEDCORNERS", [8, 8, 8, 8]),
+                ]
+            )
+        )
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.35 * cm))
+
+        table_data = [
+            ["#", "Dossier", "Nom complet", "Niveau", "Quiz", "Score global", "Contact"]
+        ]
+        for idx, statut in enumerate(retenus, start=1):
+            candidat = statut.candidat
+            quiz = getattr(candidat, "quiz", None)
+            table_data.append(
+                [
+                    str(idx),
+                    candidat.numero_dossier,
+                    Paragraph(f"<b>{candidat.nom_complet}</b><br/>{candidat.email}", styles["CellText"]),
+                    candidat.get_classe_niveau_display(),
+                    f"{getattr(quiz, 'score_total', 0)}/30",
+                    f"{statut.score_global_selection:.2f}/100",
+                    candidat.telephone,
+                ]
+            )
+
+        if len(table_data) == 1:
+            table_data.append(
+                [
+                    "-",
+                    "-",
+                    "Aucun candidat retenu pour le moment.",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                ]
+            )
+
+        retenus_table = Table(
+            table_data,
+            colWidths=[0.8 * cm, 2.3 * cm, 5.0 * cm, 2.4 * cm, 1.8 * cm, 2.5 * cm, 4.0 * cm],
+            repeatRows=1,
+            hAlign="LEFT",
+        )
+        retenus_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#163C5B")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 8.7),
+                    ("ALIGN", (0, 0), (1, -1), "CENTER"),
+                    ("ALIGN", (3, 1), (5, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#F8FAFD"), colors.HexColor("#EEF3FA")]),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#1F2A37")),
+                    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 1), (-1, -1), 8.5),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D4DDE9")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ]
+            )
+        )
+        elements.append(retenus_table)
+        elements.append(Spacer(1, 0.35 * cm))
+        elements.append(
+            Paragraph(
+                f"Organisation: {settings.KCOMAT_INFO['name']} | IFU: {settings.KCOMAT_INFO['ifu']} | RCCM: {settings.KCOMAT_INFO['rccm']}",
+                styles["BodyMuted"],
+            )
+        )
+        elements.append(
+            Paragraph(
+                f"Contact officiel: {settings.KCOMAT_INFO['phone']} | {settings.KCOMAT_INFO['email']} | {settings.KCOMAT_INFO['address']}",
+                styles["BodyMuted"],
+            )
+        )
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = "attachment; filename=candidats_retenus_aftec2026.pdf"
+        return response
+
     def each_context(self, request):
         context = super().each_context(request)
 
@@ -446,8 +646,6 @@ aftec_admin_site.register(Candidat, CandidatAdmin)
 aftec_admin_site.register(NotesAcademiques)
 aftec_admin_site.register(Documents)
 aftec_admin_site.register(Consentement)
-aftec_admin_site.register(QuizQuestion)
-aftec_admin_site.register(QuizReponse)
 
 
 @admin.register(StatutCandidat, site=aftec_admin_site)

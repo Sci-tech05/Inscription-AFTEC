@@ -6,11 +6,12 @@
     .aftec-admin-shell {
         margin-top: 18px;
         display: grid;
-        grid-template-columns: minmax(360px, .85fr) minmax(760px, 1.65fr);
+        grid-template-columns: minmax(280px, 0.95fr) minmax(0, 1.65fr);
         gap: 20px;
         width: 100%;
         align-items: start;
     }
+    .aftec-admin-shell > * { min-width: 0; }
     .aftec-panel {
         background: #fff;
         border: 1px solid #e4eaf1;
@@ -23,6 +24,13 @@
         background: linear-gradient(120deg, #133e64, #2f6a8e);
         color: #fff;
     }
+    .aftec-panel-head--split {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
     .aftec-panel-head h2 {
         margin: 0;
         font-size: 1.16rem;
@@ -33,6 +41,18 @@
         opacity: .92;
         font-size: .88rem;
     }
+    .aftec-export-btn {
+        text-decoration: none;
+        color: #fff;
+        background: linear-gradient(90deg, #f5a623, #e94560);
+        border: 1px solid rgba(255,255,255,.25);
+        border-radius: 999px;
+        font-size: .82rem;
+        font-weight: 800;
+        padding: 8px 14px;
+        white-space: nowrap;
+    }
+    .aftec-export-btn:hover { filter: brightness(1.06); }
     .aftec-body {
         padding: 16px;
     }
@@ -97,7 +117,7 @@
     .aftec-metric strong { font-size: 1.25rem; color: #17354f; display: block; overflow-wrap: anywhere; }
     .aftec-dashboard-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(320px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 14px;
     }
     .aftec-chart-card {
@@ -105,6 +125,7 @@
         border-radius: 10px;
         padding: 10px;
         background: #fff;
+        min-width: 0;
     }
     .aftec-chart-card h4 {
         margin: 0 0 6px;
@@ -130,7 +151,7 @@
     }
     .aftec-table th { color: #2d4d6b; }
     @media (max-width: 1440px) {
-        .aftec-admin-shell { grid-template-columns: minmax(340px, .9fr) minmax(560px, 1.4fr); }
+        .aftec-admin-shell { grid-template-columns: minmax(280px, .9fr) minmax(0, 1.4fr); }
     }
     @media (max-width: 1180px) {
         .aftec-admin-shell { grid-template-columns: 1fr; }
@@ -178,8 +199,13 @@
 
     <section class="aftec-panel">
         <header class="aftec-panel-head">
-            <h2>Tableau de bord AFTEC 2026</h2>
-            <p>{{ kcomat.name }} | <a href="{{ kcomat.site }}" style="color:#fff" target="_blank">{{ kcomat.site }}</a></p>
+            <div class="aftec-panel-head--split">
+                <div>
+                    <h2>Tableau de bord AFTEC 2026</h2>
+                    <p>{{ kcomat.name }} | <a href="{{ kcomat.site }}" style="color:#fff" target="_blank">{{ kcomat.site }}</a></p>
+                </div>
+                <a class="aftec-export-btn" href="{% url 'admin:retained_candidates_pdf' %}">PDF candidats retenus</a>
+            </div>
         </header>
         <div class="aftec-body">
             <div class="aftec-metrics">

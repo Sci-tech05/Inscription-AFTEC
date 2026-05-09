@@ -132,6 +132,19 @@ body {
   border-color: #d9e6f1;
 }
 
+.aftec-side-nav .aftec-side-nav-cta {
+  margin-top: 8px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(90deg, #f5a623, #e94560);
+  border-color: transparent;
+}
+
+.aftec-side-nav .aftec-side-nav-cta:hover {
+  color: #fff;
+  filter: brightness(1.06);
+}
+
 #content-start.content {
   min-width: 0;
 }

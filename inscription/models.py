@@ -24,6 +24,11 @@ def validate_file_extension(file_obj):
 
 
 class Candidat(models.Model):
+    SECONDARY_LEVELS = {"4EME", "3EME", "2NDE", "1ERE", "TLE"}
+    HIGHER_AND_PRO_LEVELS = {"L1", "L2", "L3", "M1", "M2", "AUTRE"}
+    SECONDARY_QUIZ_CATEGORIES = ("physique", "mathematiques")
+    HIGHER_AND_PRO_QUIZ_CATEGORIES = ("informatique", "ia", "entrepreneuriat", "divers")
+
     SEXE_CHOICES = (
         ("M", "Masculin"),
         ("F", "Féminin"),
@@ -76,6 +81,14 @@ class Candidat(models.Model):
     @property
     def nom_complet(self) -> str:
         return f"{self.prenom} {self.nom}".strip()
+
+    @classmethod
+    def quiz_categories_for_level(cls, classe_niveau: str | None) -> tuple[str, ...]:
+        if classe_niveau in cls.SECONDARY_LEVELS:
+            return cls.SECONDARY_QUIZ_CATEGORIES
+        if classe_niveau in cls.HIGHER_AND_PRO_LEVELS:
+            return cls.HIGHER_AND_PRO_QUIZ_CATEGORIES
+        return ()
 
     def clean(self):
         errors = {}
@@ -189,7 +202,7 @@ class Consentement(models.Model):
 
 class QuizQuestion(models.Model):
     CATEGORY_CHOICES = (
-        ("electronique", "Électronique"),
+        ("physique", "Physique"),
         ("mathematiques", "Mathématiques"),
         ("informatique", "Informatique"),
         ("ia", "Intelligence Artificielle"),
@@ -216,18 +229,19 @@ class QuizQuestion(models.Model):
 
 class QuizReponse(models.Model):
     candidat = models.OneToOneField(Candidat, on_delete=models.CASCADE, related_name="quiz")
-    score_electronique = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    score_mathematiques = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    score_informatique = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    score_ia = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    score_entrepreneuriat = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    score_divers = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    score_total = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(30)])
+    score_physique = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    score_mathematiques = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    score_informatique = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    score_ia = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    score_entrepreneuriat = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    score_divers = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    quiz_elapsed_seconds = models.PositiveIntegerField(default=0)
+    score_total = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(40)])
     reponses_json = models.JSONField(default=dict, blank=True)
 
     def save(self, *args, **kwargs):
         self.score_total = (
-            self.score_electronique
+            self.score_physique
             + self.score_mathematiques
             + self.score_informatique
             + self.score_ia
@@ -237,7 +251,7 @@ class QuizReponse(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Quiz de {self.candidat.nom_complet} ({self.score_total}/30)"
+        return f"Quiz de {self.candidat.nom_complet} ({self.score_total} points)"
 
 
 class StatutCandidat(models.Model):

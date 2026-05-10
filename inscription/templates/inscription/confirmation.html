@@ -27,7 +27,7 @@
                     {% endif %}
                 {% endif %}
                 {% if quiz %}
-                    <div class="col-md-12"><strong>Score quiz total :</strong> {{ quiz.score_total }}/30</div>
+                    <div class="col-md-12"><strong>Score quiz total :</strong> {{ quiz.score_total }}/{{ quiz_total_max }}</div>
                 {% endif %}
             </div>
 
@@ -55,7 +55,7 @@
         data: {
             labels: data.labels,
             datasets: [{
-                label: 'Score /5',
+                label: 'Score par categorie',
                 data: data.scores,
                 backgroundColor: 'rgba(233, 69, 96, 0.25)',
                 borderColor: '#E94560',
@@ -63,7 +63,7 @@
             }]
         },
         options: {
-            scales: { r: { suggestedMin: 0, suggestedMax: 5 } }
+            scales: { r: { suggestedMin: 0, suggestedMax: data.max_score || 10 } }
         }
     });
 })();

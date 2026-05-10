@@ -21,7 +21,7 @@ from .models import Candidat, Consentement, Documents, NotesAcademiques, QuizQue
 
 
 QUIZ_CATEGORY_ORDER = [
-    "electronique",
+    "physique",
     "mathematiques",
     "informatique",
     "ia",
@@ -30,6 +30,14 @@ QUIZ_CATEGORY_ORDER = [
 ]
 
 CATEGORY_LABELS = dict(QuizQuestion.CATEGORY_CHOICES)
+CATEGORY_MAX_SCORES = {
+    "physique": 10,
+    "mathematiques": 10,
+    "informatique": 5,
+    "ia": 5,
+    "entrepreneuriat": 5,
+    "divers": 5,
+}
 
 
 def home(request):
@@ -48,6 +56,8 @@ def _build_quiz_tabs(form):
         )
     tabs = []
     for category in QUIZ_CATEGORY_ORDER:
+        if not grouped.get(category):
+            continue
         tabs.append(
             {
                 "key": category,
@@ -58,17 +68,20 @@ def _build_quiz_tabs(form):
     return tabs
 
 
-def _candidate_chart_data(quiz):
+def _candidate_chart_data(candidat, quiz):
+    categories = Candidat.quiz_categories_for_level(candidat.classe_niveau)
+    score_fields = {
+        "physique": "score_physique",
+        "mathematiques": "score_mathematiques",
+        "informatique": "score_informatique",
+        "ia": "score_ia",
+        "entrepreneuriat": "score_entrepreneuriat",
+        "divers": "score_divers",
+    }
     return {
-        "labels": ["Électronique", "Mathématiques", "Informatique", "IA", "Entrepreneuriat", "Divers"],
-        "scores": [
-            getattr(quiz, "score_electronique", 0),
-            getattr(quiz, "score_mathematiques", 0),
-            getattr(quiz, "score_informatique", 0),
-            getattr(quiz, "score_ia", 0),
-            getattr(quiz, "score_entrepreneuriat", 0),
-            getattr(quiz, "score_divers", 0),
-        ],
+        "labels": [CATEGORY_LABELS.get(category, category.title()) for category in categories],
+        "scores": [getattr(quiz, score_fields[category], 0) for category in categories],
+        "max_score": max((CATEGORY_MAX_SCORES.get(category, 0) for category in categories), default=0),
     }
 
 
@@ -148,12 +161,14 @@ def confirmation(request, candidat_id):
     candidat = get_object_or_404(Candidat, pk=candidat_id)
     quiz = getattr(candidat, "quiz", None)
     notes = getattr(candidat, "notes", None)
+    quiz_categories = Candidat.quiz_categories_for_level(candidat.classe_niveau)
 
     context = {
         "candidat": candidat,
         "quiz": quiz,
         "notes": notes,
-        "chart_data": _candidate_chart_data(quiz),
+        "quiz_total_max": sum(CATEGORY_MAX_SCORES.get(category, 0) for category in quiz_categories),
+        "chart_data": _candidate_chart_data(candidat, quiz),
     }
     return render(request, "inscription/confirmation.html", context)
 
@@ -457,3 +472,4 @@ def confirmation_pdf(request, candidat_id):
 def quiz_info(request):
     form = InscriptionMultiStepForm()
     return render(request, "inscription/quiz.html", {"quiz_tabs": _build_quiz_tabs(form)})
+

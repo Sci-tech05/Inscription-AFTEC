@@ -22,6 +22,7 @@
 
         <form method="post" enctype="multipart/form-data" id="inscriptionForm" class="glass-card p-4">
             {% csrf_token %}
+            {{ form.quiz_elapsed_seconds }}
 
             {% if form.non_field_errors %}
                 <div class="alert alert-danger">{{ form.non_field_errors }}</div>
@@ -106,7 +107,7 @@
                     <ul class="nav nav-tabs mb-3 flex-nowrap" id="quizTabs" role="tablist">
                         {% for tab in quiz_tabs %}
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link {% if forloop.first %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-{{ tab.key }}" type="button" role="tab">{{ tab.label }}</button>
+                                <button class="nav-link {% if forloop.first %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-{{ tab.key }}" data-quiz-category="{{ tab.key }}" type="button" role="tab">{{ tab.label }}</button>
                             </li>
                         {% endfor %}
                     </ul>
@@ -114,7 +115,7 @@
 
                 <div class="tab-content">
                     {% for tab in quiz_tabs %}
-                        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="tab-{{ tab.key }}" role="tabpanel">
+                        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="tab-{{ tab.key }}" data-quiz-category="{{ tab.key }}" role="tabpanel">
                             {% for item in tab.items %}
                                 <div class="quiz-question mb-4">
                                     <p class="fw-semibold mb-2">{{ forloop.counter }}. {{ item.question.question }}</p>

@@ -69,15 +69,23 @@ h5 {
 
 .brand-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.02em;
 }
 
 .brand-logo {
-    width: 100px;
-    height: 46px;
+    width: 112px;
+    height: 48px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 3px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.site-header .navbar-brand:hover .brand-title,
+.site-header .navbar-brand:focus .brand-title {
+    color: #fff;
 }
 
 .site-header {
@@ -612,8 +620,11 @@ canvas {
     }
 
     .brand-logo {
-        width: 52px;
-        height: 52px;
+        width: 54px;
+        height: 54px;
+        border-radius: 8px;
+        object-fit: cover;
+        object-position: center;
     }
 
     .navbar-collapse {
@@ -744,6 +755,11 @@ canvas {
 @media (max-width: 575.98px) {
     .brand-title {
         font-size: 1rem;
+    }
+
+    .brand-logo {
+        width: 50px;
+        height: 50px;
     }
 
     .hero-particles {

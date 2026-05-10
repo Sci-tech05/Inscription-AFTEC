@@ -138,7 +138,7 @@ class QuizReponseInline(admin.StackedInline):
     model = QuizReponse
     extra = 0
     verbose_name_plural = "Quiz"
-    readonly_fields = ("score_total",)
+    readonly_fields = ("score_total", "quiz_elapsed_seconds")
 
 
 class StatutInline(admin.StackedInline):
@@ -259,17 +259,29 @@ class CandidatAdmin(admin.ModelAdmin):
         color = "#0F9B58" if value >= 12 else "#F5A623" if value >= 10 else "#E94560"
         return format_html('<strong style="color:{}">{}/20</strong>', color, f"{value:.2f}")
 
-    @admin.display(description="Score quiz /30")
+    @admin.display(description="Score quiz")
     def score_quiz_bar(self, obj):
         score = getattr(getattr(obj, "quiz", None), "score_total", 0)
-        pct = int((score / 30) * 100) if score else 0
-        color = "#0F9B58" if score >= 20 else "#F5A623" if score >= 12 else "#E94560"
+        category_max = {
+            "physique": 10,
+            "mathematiques": 10,
+            "informatique": 5,
+            "ia": 5,
+            "entrepreneuriat": 5,
+            "divers": 5,
+        }
+        categories = Candidat.quiz_categories_for_level(obj.classe_niveau)
+        max_score = sum(category_max.get(category, 0) for category in categories) or 1
+        pct = int((score / max_score) * 100) if score else 0
+        ratio = score / max_score
+        color = "#0F9B58" if ratio >= 0.7 else "#F5A623" if ratio >= 0.5 else "#E94560"
         return format_html(
             '<div style="min-width:170px"><div style="background:#eee;border-radius:999px;height:10px;">'
-            '<div style="width:{}%;background:{};height:10px;border-radius:999px;"></div></div><small>{}/30</small></div>',
+            '<div style="width:{}%;background:{};height:10px;border-radius:999px;"></div></div><small>{}/{}</small></div>',
             pct,
             color,
             score,
+            max_score,
         )
 
     @admin.display(description="Score global")
@@ -387,6 +399,13 @@ class AFTECAdminSite(AdminSite):
     index_template = "admin/custom_index.html"
     login_template = "admin/custom_login.html"
     enable_nav_sidebar = True
+
+    @staticmethod
+    def _format_duration(seconds):
+        total = int(seconds or 0)
+        minutes = total // 60
+        remainder = total % 60
+        return f"{minutes:02d}:{remainder:02d}"
 
     def get_urls(self):
         urls = super().get_urls()
@@ -647,7 +666,7 @@ class AFTECAdminSite(AdminSite):
         evolution_days = [start_day + timedelta(days=i) for i in range(7)]
 
         quiz_avg = QuizReponse.objects.aggregate(
-            electronique=Avg("score_electronique"),
+            physique=Avg("score_physique"),
             mathematiques=Avg("score_mathematiques"),
             informatique=Avg("score_informatique"),
             ia=Avg("score_ia"),
@@ -656,6 +675,41 @@ class AFTECAdminSite(AdminSite):
         )
 
         top10 = StatutCandidat.objects.select_related("candidat").order_by("-score_global_selection")[:10]
+        student_levels = Candidat.SECONDARY_LEVELS
+        higher_levels = Candidat.HIGHER_AND_PRO_LEVELS
+
+        student_quiz_ranking = (
+            QuizReponse.objects.select_related("candidat")
+            .filter(candidat__classe_niveau__in=student_levels)
+            .order_by("-score_total", "candidat__date_inscription")
+        )
+        higher_quiz_ranking = (
+            QuizReponse.objects.select_related("candidat")
+            .filter(candidat__classe_niveau__in=higher_levels)
+            .order_by("-score_total", "candidat__date_inscription")
+        )
+
+        def _serialize_quiz_ranking(rows, limit=20):
+            sorted_rows = sorted(
+                rows,
+                key=lambda item: (
+                    -int(item.score_total or 0),
+                    int(item.quiz_elapsed_seconds) if int(item.quiz_elapsed_seconds or 0) > 0 else 999999,
+                    item.candidat.date_inscription,
+                ),
+            )
+            payload = []
+            for index, row in enumerate(sorted_rows[:limit], start=1):
+                payload.append(
+                    {
+                        "rank": index,
+                        "nom": row.candidat.nom_complet,
+                        "niveau": row.candidat.get_classe_niveau_display(),
+                        "score": int(row.score_total or 0),
+                        "temps": self._format_duration(row.quiz_elapsed_seconds),
+                    }
+                )
+            return payload
 
         context["dashboard_data"] = {
             "total": total,
@@ -681,9 +735,9 @@ class AFTECAdminSite(AdminSite):
                 "values": [by_day_map.get(d, 0) for d in evolution_days],
             },
             "quiz_avg": {
-                "labels": ["Electronique", "Mathematiques", "Informatique", "IA", "Entrepreneuriat", "Divers"],
+                "labels": ["Physique", "Mathematiques", "Informatique", "IA", "Entrepreneuriat", "Divers"],
                 "values": [
-                    round(float(quiz_avg.get("electronique") or 0), 2),
+                    round(float(quiz_avg.get("physique") or 0), 2),
                     round(float(quiz_avg.get("mathematiques") or 0), 2),
                     round(float(quiz_avg.get("informatique") or 0), 2),
                     round(float(quiz_avg.get("ia") or 0), 2),
@@ -692,6 +746,10 @@ class AFTECAdminSite(AdminSite):
                 ],
             },
             "top10": [{"nom": item.candidat.nom_complet, "score": item.score_global_selection} for item in top10],
+            "quiz_rankings": {
+                "eleves": _serialize_quiz_ranking(student_quiz_ranking),
+                "licence_pro": _serialize_quiz_ranking(higher_quiz_ranking),
+            },
         }
         context["kcomat"] = settings.KCOMAT_INFO
 

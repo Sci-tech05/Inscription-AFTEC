@@ -130,9 +130,32 @@
         text-align: left;
     }
     .aftec-table th { color: #2d4d6b; }
+    .aftec-ranking-grid {
+        margin-top: 14px;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .aftec-ranking-card {
+        border: 1px solid #e7edf5;
+        border-radius: 10px;
+        background: #fff;
+        padding: 10px;
+    }
+    .aftec-ranking-card h4 {
+        margin: 0 0 8px;
+        font-size: .9rem;
+        color: #17354f;
+    }
+    .aftec-ranking-empty {
+        font-size: .86rem;
+        color: #6b7f95;
+        margin: 0;
+    }
     @media (max-width: 1180px) {
         .aftec-metrics { grid-template-columns: 1fr 1fr 1fr; }
         .aftec-dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .aftec-ranking-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 700px) {
         .aftec-metrics { grid-template-columns: 1fr; }
@@ -175,6 +198,46 @@
                 <tbody id="topTable"></tbody>
             </table>
         </div>
+
+        <div class="aftec-ranking-grid">
+            <div class="aftec-ranking-card">
+                <h4>Classement Quiz - Elèves (4ème à Tle)</h4>
+                <div class="aftec-table-wrap">
+                    <table class="aftec-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Candidat</th>
+                                <th>Niveau</th>
+                                <th>Score /20</th>
+                                <th>Temps</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quizRankEleves"></tbody>
+                    </table>
+                </div>
+                <p id="quizRankElevesEmpty" class="aftec-ranking-empty" style="display:none;">Aucune donnée pour le moment.</p>
+            </div>
+
+            <div class="aftec-ranking-card">
+                <h4>Classement Quiz - Licence à Professionnel</h4>
+                <div class="aftec-table-wrap">
+                    <table class="aftec-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Candidat</th>
+                                <th>Niveau</th>
+                                <th>Score /20</th>
+                                <th>Temps</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quizRankHigher"></tbody>
+                    </table>
+                </div>
+                <p id="quizRankHigherEmpty" class="aftec-ranking-empty" style="display:none;">Aucune donnée pour le moment.</p>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -208,7 +271,7 @@
         ['quizRadarChart', 'bar', {
             labels: data.quiz_avg?.labels || [],
             datasets: [{
-                label: 'Moyenne /5',
+                label: 'Moyenne /10',
                 data: (data.quiz_avg?.values || []).map((v) => Number(v || 0)),
                 borderColor: '#E94560',
                 backgroundColor: 'rgba(233,69,96,0.55)',
@@ -221,7 +284,7 @@
                 y: {
                     beginAtZero: true,
                     min: 0,
-                    max: 5,
+                    max: 10,
                     ticks: { stepSize: 1 },
                     grid: { color: '#d8e2ee' }
                 },
@@ -245,6 +308,26 @@
         row.innerHTML = `<td>${item.nom}</td><td>${item.score}</td>`;
         topTable.appendChild(row);
     });
+
+    function renderRankingTable(bodyId, emptyId, rows) {
+        const tbody = document.getElementById(bodyId);
+        const emptyEl = document.getElementById(emptyId);
+        if (!tbody || !emptyEl) return;
+
+        if (!rows || !rows.length) {
+            emptyEl.style.display = 'block';
+            return;
+        }
+
+        rows.forEach((item) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${item.rank}</td><td>${item.nom}</td><td>${item.niveau}</td><td>${item.score}</td><td>${item.temps}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    renderRankingTable('quizRankEleves', 'quizRankElevesEmpty', data.quiz_rankings?.eleves || []);
+    renderRankingTable('quizRankHigher', 'quizRankHigherEmpty', data.quiz_rankings?.licence_pro || []);
 })();
 </script>
 {% endblock %}

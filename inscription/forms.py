@@ -97,10 +97,21 @@ class InscriptionMultiStepForm(forms.Form):
     bulletin_an2 = forms.FileField(required=False, label="Bulletin S1 année actuelle")
     lettre_recommandation = forms.FileField(required=False, label="Lettre recommandation (facultative)")
     autorisation_parentale = forms.FileField(required=False)
+    quiz_elapsed_seconds = forms.IntegerField(required=False, min_value=0, initial=0, widget=forms.HiddenInput())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.questions = list(QuizQuestion.objects.all())
+        selected_level = ""
+        if self.is_bound:
+            selected_level = (self.data.get("classe_niveau") or "").strip()
+        else:
+            selected_level = (self.initial.get("classe_niveau") or "").strip()
+
+        self.quiz_categories = Candidat.quiz_categories_for_level(selected_level)
+        question_queryset = QuizQuestion.objects.all()
+        if self.quiz_categories:
+            question_queryset = question_queryset.filter(categorie__in=self.quiz_categories)
+        self.questions = list(question_queryset)
 
         for question in self.questions:
             field_name = f"question_{question.id}"
@@ -113,7 +124,7 @@ class InscriptionMultiStepForm(forms.Form):
                     ("D", question.option_d),
                 ),
                 widget=forms.RadioSelect,
-                required=True,
+                required=bool(self.quiz_categories),
             )
 
         for _, field in self.fields.items():
@@ -238,7 +249,7 @@ class InscriptionMultiStepForm(forms.Form):
 
     def build_quiz_scores(self):
         category_mapping = {
-            "electronique": "score_electronique",
+            "physique": "score_physique",
             "mathematiques": "score_mathematiques",
             "informatique": "score_informatique",
             "ia": "score_ia",
@@ -263,6 +274,7 @@ class InscriptionMultiStepForm(forms.Form):
                 scores[score_field] += 1
 
         scores["score_total"] = sum(scores.values())
+        scores["quiz_elapsed_seconds"] = int(self.cleaned_data.get("quiz_elapsed_seconds") or 0)
         scores["reponses_json"] = raw_answers
         return scores
 

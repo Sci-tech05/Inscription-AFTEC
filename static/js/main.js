@@ -75,10 +75,15 @@
     const bulletinAn2Input = document.getElementById('id_bulletin_an2');
     const quizPane = document.querySelector('.step-pane[data-step="6"]');
     const quizTabButtons = Array.from(document.querySelectorAll('#quizTabs button[data-bs-target]'));
+    const quizTabPanes = Array.from(document.querySelectorAll('.step-pane[data-step="6"] .tab-content .tab-pane'));
     const timerEl = document.getElementById('quizTimer');
+    const quizElapsedInput = document.getElementById('id_quiz_elapsed_seconds');
 
     const STORAGE_KEY = 'aftec2026_form';
     const HIGHER_LEVELS = new Set(['L1', 'L2', 'L3', 'M1', 'M2']);
+    const SECONDARY_LEVELS = new Set(['4EME', '3EME', '2NDE', '1ERE', 'TLE']);
+    const SECONDARY_QUIZ_CATEGORIES = new Set(['physique', 'mathematiques']);
+    const HIGHER_AND_PRO_QUIZ_CATEGORIES = new Set(['informatique', 'ia', 'entrepreneuriat', 'divers']);
     const PROFESSIONAL_LEVEL = 'AUTRE';
     let currentStep = 1;
     let quizTimerSeconds = 0;
@@ -90,6 +95,48 @@
 
     function isProfessionalLevel() {
         return (classeNiveauInput?.value || '').trim() === PROFESSIONAL_LEVEL;
+    }
+
+    function getAllowedQuizCategories() {
+        const level = (classeNiveauInput?.value || '').trim();
+        if (SECONDARY_LEVELS.has(level)) return SECONDARY_QUIZ_CATEGORIES;
+        if (HIGHER_LEVELS.has(level) || level === PROFESSIONAL_LEVEL) return HIGHER_AND_PRO_QUIZ_CATEGORIES;
+        return null;
+    }
+
+    function updateQuizSectionsByLevel() {
+        const allowedCategories = getAllowedQuizCategories();
+
+        quizTabButtons.forEach((button) => {
+            const category = button.dataset.quizCategory;
+            const visible = !allowedCategories || allowedCategories.has(category);
+            button.classList.toggle('d-none', !visible);
+            button.disabled = !visible;
+            button.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        });
+
+        quizTabPanes.forEach((pane) => {
+            const category = pane.dataset.quizCategory;
+            const visible = !allowedCategories || allowedCategories.has(category);
+            pane.classList.toggle('d-none', !visible);
+            if (!visible) {
+                pane.classList.remove('show', 'active');
+            }
+            pane.querySelectorAll('input[type="radio"]').forEach((input) => {
+                input.disabled = !visible;
+                if (!visible) {
+                    input.checked = false;
+                }
+            });
+        });
+
+        const activeVisibleButton = quizTabButtons.find((button) => button.classList.contains('active') && !button.disabled);
+        if (!activeVisibleButton) {
+            const firstVisibleButton = quizTabButtons.find((button) => !button.disabled);
+            if (firstVisibleButton) {
+                bootstrap.Tab.getOrCreateInstance(firstVisibleButton).show();
+            }
+        }
     }
 
     function updateAcademicFieldsByLevel() {
@@ -434,6 +481,9 @@
         if (quizTimerInterval) return;
         quizTimerInterval = setInterval(() => {
             quizTimerSeconds += 1;
+            if (quizElapsedInput) {
+                quizElapsedInput.value = String(quizTimerSeconds);
+            }
             const mm = String(Math.floor(quizTimerSeconds / 60)).padStart(2, '0');
             const ss = String(quizTimerSeconds % 60).padStart(2, '0');
             timerEl.textContent = `Temps indicatif : ${mm}:${ss}`;
@@ -442,6 +492,7 @@
 
     restoreDraft();
     updateAcademicFieldsByLevel();
+    updateQuizSectionsByLevel();
     updateEligibilityIndicators();
     updateScoreMeters();
     updateDocumentBadges();
@@ -479,6 +530,7 @@
 
     form.addEventListener('change', () => {
         updateAcademicFieldsByLevel();
+        updateQuizSectionsByLevel();
         updateEligibilityIndicators();
         updateDocumentBadges();
         updateFinalStepActions();
@@ -493,6 +545,9 @@
             showIncompleteQuizTarget(firstIncomplete);
             showToast('Veuillez repondre a toutes les questions du quiz avant de soumettre.', 3500);
             return;
+        }
+        if (quizElapsedInput) {
+            quizElapsedInput.value = String(quizTimerSeconds);
         }
         sessionStorage.removeItem(STORAGE_KEY);
     });

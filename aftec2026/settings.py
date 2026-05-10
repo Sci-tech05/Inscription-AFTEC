@@ -28,6 +28,15 @@ ALLOWED_HOSTS = config(
     cast=lambda v: [host.strip() for host in v.split(',') if host.strip()]
 )
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://inscription-aftec-2026.onrender.com',
+]
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

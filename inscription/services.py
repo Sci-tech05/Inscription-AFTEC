@@ -5,6 +5,14 @@ from django.core.mail import EmailMultiAlternatives
 
 
 def send_decision_email(candidat, statut_code: str, commentaire: str = ""):
+    backend = str(getattr(settings, "EMAIL_BACKEND", "") or "")
+    is_smtp_backend = backend.endswith("smtp.EmailBackend")
+    if is_smtp_backend and not str(getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip():
+        raise RuntimeError(
+            "Configuration email incomplète: EMAIL_HOST_PASSWORD est vide. "
+            "Renseignez le mot de passe d'application SMTP dans les variables d'environnement."
+        )
+
     if statut_code == "RETENU":
         subject = "AFTEC 2026 - Candidature retenue"
         status_label = "retenue"

@@ -127,6 +127,26 @@ class InscriptionMultiStepForm(forms.Form):
                 required=bool(self.quiz_categories),
             )
 
+        academic_score_fields = (
+            "moyenne_generale_an1",
+            "moyenne_generale_an2",
+            "moyenne_maths_an1",
+            "moyenne_maths_an2",
+            "moyenne_physique_an1",
+            "moyenne_physique_an2",
+        )
+        for field_name in academic_score_fields:
+            field = self.fields[field_name]
+            field.widget.attrs.update(
+                {
+                    "type": "number",
+                    "min": "0",
+                    "max": "20",
+                    "step": "0.01",
+                    "inputmode": "decimal",
+                }
+            )
+
         for _, field in self.fields.items():
             css = "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else "form-control"
             if isinstance(field.widget, forms.Select):

@@ -300,6 +300,19 @@
         });
     }
 
+    function enforceAcademicScoreBounds() {
+        document.querySelectorAll('.score-field input[type="number"]').forEach((input) => {
+            if (input.disabled || input.value === '') return;
+            const raw = String(input.value).replace(',', '.');
+            const value = Number(raw);
+            if (Number.isNaN(value)) return;
+            const clamped = Math.max(0, Math.min(20, value));
+            if (clamped !== value) {
+                input.value = clamped.toFixed(2);
+            }
+        });
+    }
+
     function updateDocumentBadges() {
         document.querySelectorAll('.document-field').forEach((block) => {
             const input = block.querySelector('input[type="file"]');
@@ -494,6 +507,7 @@
     updateAcademicFieldsByLevel();
     updateQuizSectionsByLevel();
     updateEligibilityIndicators();
+    enforceAcademicScoreBounds();
     updateScoreMeters();
     updateDocumentBadges();
     if (timerEl) {
@@ -523,6 +537,7 @@
 
     form.addEventListener('input', () => {
         updateEligibilityIndicators();
+        enforceAcademicScoreBounds();
         updateScoreMeters();
         updateFinalStepActions();
         saveDraft();
@@ -532,6 +547,7 @@
         updateAcademicFieldsByLevel();
         updateQuizSectionsByLevel();
         updateEligibilityIndicators();
+        enforceAcademicScoreBounds();
         updateDocumentBadges();
         updateFinalStepActions();
         saveDraft();

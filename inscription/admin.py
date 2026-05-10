@@ -232,10 +232,15 @@ class CandidatAdmin(admin.ModelAdmin):
                 try:
                     send_decision_email(statut_obj.candidat, statut_obj.statut, commentaire=statut_obj.commentaire_jury)
                     sent += 1
-                except Exception:
+                except Exception as exc:
                     failed += 1
                     statut_obj.email_envoye = False
                     statut_obj.save(update_fields=["email_envoye"])
+                    self.message_user(
+                        request,
+                        f"Échec d'envoi pour {statut_obj.candidat.email}: {exc}",
+                        level=messages.WARNING,
+                    )
 
         if sent:
             self.message_user(request, f"{sent} email(s) envoyé(s) depuis la fiche candidat.", level=messages.SUCCESS)
@@ -326,8 +331,13 @@ class CandidatAdmin(admin.ModelAdmin):
                 statut.email_envoye = True
                 statut.save(update_fields=["email_envoye", "date_decision", "score_global_selection"])
                 sent += 1
-            except Exception:
+            except Exception as exc:
                 failed += 1
+                self.message_user(
+                    request,
+                    f"Échec d'envoi pour {candidat.email}: {exc}",
+                    level=messages.WARNING,
+                )
 
         level = messages.SUCCESS if failed == 0 else messages.WARNING
         self.message_user(
@@ -385,8 +395,13 @@ class CandidatAdmin(admin.ModelAdmin):
                 statut.email_envoye = True
                 statut.save(update_fields=["email_envoye", "date_decision", "score_global_selection"])
                 sent += 1
-            except Exception:
+            except Exception as exc:
                 failed += 1
+                self.message_user(
+                    request,
+                    f"Échec d'envoi pour {candidat.email}: {exc}",
+                    level=messages.WARNING,
+                )
 
         level = messages.SUCCESS if failed == 0 else messages.WARNING
         self.message_user(request, f"{sent} email(s) envoyé(s), {failed} échec(s).", level=level)
@@ -792,11 +807,11 @@ class StatutCandidatAdmin(admin.ModelAdmin):
         try:
             send_decision_email(obj.candidat, obj.statut, commentaire=obj.commentaire_jury)
             self.message_user(request, "Email de décision envoyé au candidat.", level=messages.SUCCESS)
-        except Exception:
+        except Exception as exc:
             obj.email_envoye = False
             obj.save(update_fields=["email_envoye"])
             self.message_user(
                 request,
-                "Échec d'envoi email. La case 'email envoyé' a été décochée automatiquement.",
+                f"Échec d'envoi email ({exc}). La case 'email envoyé' a été décochée automatiquement.",
                 level=messages.WARNING,
             )

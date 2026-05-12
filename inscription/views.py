@@ -186,7 +186,7 @@ def confirmation_pdf(request, candidat_id):
         rightMargin=1.35 * cm,
         leftMargin=1.35 * cm,
         topMargin=1.0 * cm,
-        bottomMargin=1.1 * cm,
+        bottomMargin=2.3 * cm,
     )
     styles = getSampleStyleSheet()
     styles.add(
@@ -197,6 +197,7 @@ def confirmation_pdf(request, candidat_id):
             fontName="Helvetica-Bold",
             fontSize=16,
             leading=19,
+            alignment=1,
         )
     )
     styles.add(
@@ -206,6 +207,7 @@ def confirmation_pdf(request, candidat_id):
             textColor=colors.HexColor("#E8F1FF"),
             fontSize=9.5,
             leading=12,
+            alignment=1,
         )
     )
     styles.add(
@@ -238,6 +240,26 @@ def confirmation_pdf(request, candidat_id):
     )
 
     elements = []
+    footer_line_1 = (
+        f"Organisation: {settings.KCOMAT_INFO['name']} | IFU: {settings.KCOMAT_INFO['ifu']} | "
+        f"RCCM: {settings.KCOMAT_INFO['rccm']}"
+    )
+    footer_line_2 = (
+        f"Contact officiel: {settings.KCOMAT_INFO['phone']} | {settings.KCOMAT_INFO['email']} | "
+        f"{settings.KCOMAT_INFO['address']}"
+    )
+    footer_line_3 = f"Site: {settings.KCOMAT_INFO['site']}"
+
+    def _draw_fixed_footer(canvas, _doc):
+        canvas.saveState()
+        canvas.setFillColor(colors.HexColor("#5C6470"))
+        canvas.setFont("Helvetica", 9.2)
+        center_x = A4[0] / 2
+        canvas.drawCentredString(center_x, 1.45 * cm, footer_line_1)
+        canvas.drawCentredString(center_x, 1.05 * cm, footer_line_2)
+        canvas.setFont("Helvetica-Bold", 9.2)
+        canvas.drawCentredString(center_x, 0.65 * cm, footer_line_3)
+        canvas.restoreState()
 
     def _fit_logo(path, max_width_cm, max_height_cm):
         if not path.exists():
@@ -255,16 +277,18 @@ def confirmation_pdf(request, candidat_id):
     logo_kcomat = settings.BASE_DIR / "static" / "img" / "logo-kcomat.jpeg"
     left_logo = _fit_logo(logo_aftec, 3.8, 1.6)
     right_logo = _fit_logo(logo_kcomat, 4.8, 1.6)
-
     header_text = [
-        Paragraph("FORMULAIRE OFFICIEL D'INSCRIPTION", styles["HeaderTitle"]),
+        Paragraph("FORMULAIRE OFFICIEL", styles["HeaderTitle"]),
+        Paragraph("D'INSCRIPTION", styles["HeaderTitle"]),
         Paragraph("AFTEC 2026 | Session du 03 au 21 Août 2026 | Pobè, Bénin", styles["HeaderSubtitle"]),
         Paragraph(f"Numéro de dossier: <b>{candidat.numero_dossier}</b>", styles["HeaderSubtitle"]),
     ]
+    available_width = A4[0] - doc.leftMargin - doc.rightMargin
+    side_col_width = 4.1 * cm
     header_table = Table(
         [[left_logo, header_text, right_logo]],
-        colWidths=[4.1 * cm, 9.6 * cm, 4.0 * cm],
-        hAlign="LEFT",
+        colWidths=[side_col_width, available_width - (2 * side_col_width), side_col_width],
+        hAlign="CENTER",
     )
     header_table.setStyle(
         TableStyle(
@@ -272,6 +296,7 @@ def confirmation_pdf(request, candidat_id):
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0E2A47")),
                 ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#0A2039")),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
@@ -439,29 +464,7 @@ def confirmation_pdf(request, candidat_id):
             styles["BodySmall"],
         )
     )
-    elements.append(Spacer(1, 0.2 * cm))
-    elements.append(
-        Paragraph(
-            f"Organisation: {settings.KCOMAT_INFO['name']} | IFU: {settings.KCOMAT_INFO['ifu']} | "
-            f"RCCM: {settings.KCOMAT_INFO['rccm']}",
-            styles["BodyMuted"],
-        )
-    )
-    elements.append(
-        Paragraph(
-            f"Contact officiel: {settings.KCOMAT_INFO['phone']} | {settings.KCOMAT_INFO['email']} | "
-            f"{settings.KCOMAT_INFO['address']}",
-            styles["BodyMuted"],
-        )
-    )
-    elements.append(
-        Paragraph(
-            f"Site: {settings.KCOMAT_INFO['site']}",
-            styles["BodyMuted"],
-        )
-    )
-
-    doc.build(elements)
+    doc.build(elements, onFirstPage=_draw_fixed_footer, onLaterPages=_draw_fixed_footer)
     buffer.seek(0)
 
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
@@ -472,4 +475,5 @@ def confirmation_pdf(request, candidat_id):
 def quiz_info(request):
     form = InscriptionMultiStepForm()
     return render(request, "inscription/quiz.html", {"quiz_tabs": _build_quiz_tabs(form)})
+
 

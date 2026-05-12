@@ -10,7 +10,12 @@
                 <div>
                     <p class="challenge-kicker mb-1">Jour {{ challenge.sequence_day }}</p>
                     <h2 class="mb-1">{{ challenge.title }}</h2>
-                    <p class="mb-0 text-muted">Temps restant: {{ remaining_label }} | Temps ecoule: {{ elapsed_live }}</p>
+                    <p class="mb-0 text-muted">
+                        Temps restant:
+                        <span data-countdown-seconds="{{ remaining_seconds }}" data-expire-reload="1">{{ remaining_label }}</span>
+                        | Temps ecoule:
+                        <span data-elapsed-seconds="{{ elapsed_live_seconds }}">{{ elapsed_live }}</span>
+                    </p>
                 </div>
                 <a href="{% url 'inscription:challenges_portal' %}" class="btn btn-outline-light">Retour</a>
             </div>

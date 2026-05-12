@@ -23,7 +23,7 @@
                 <article class="challenge-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}0">
                     <div class="challenge-card-head">
                         <span class="challenge-day">Jour {{ item.challenge.sequence_day }}</span>
-                        <span class="challenge-timer">Temps restant: {{ item.remaining_label }}</span>
+                        <span class="challenge-timer">Temps restant: <span data-countdown-seconds="{{ item.remaining_seconds }}">{{ item.remaining_label }}</span></span>
                     </div>
                     <h3>{{ item.challenge.title }}</h3>
                     <p class="text-muted">{{ item.challenge.description }}</p>

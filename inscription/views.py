@@ -599,6 +599,7 @@ def challenges_portal(request):
             {
                 "challenge": challenge,
                 "remaining_label": f"{remaining_hours:02d}h {remaining_minutes:02d}min",
+                "remaining_seconds": remaining_seconds,
                 "submission": submission,
                 "status": status,
                 "score_label": "-" if not submission or submission.score is None else f"{float(submission.score):.2f}",
@@ -634,7 +635,7 @@ def challenges_portal(request):
 @require_POST
 def challenge_start(request, challenge_id):
     if not _is_challenge_portal_enabled():
-        messages.warning(request, "Le module Challenges est actuellement d?sactiv? par l'administration.")
+        messages.warning(request, "Le module Challenges est actuellement desactive par l'administration.")
         return redirect("inscription:home")
 
     candidat = _get_challenge_candidate(request)
@@ -653,17 +654,17 @@ def challenge_start(request, challenge_id):
         defaults={"started_at": timezone.now()},
     )
     if submission.is_submitted:
-        messages.info(request, "Vous avez d?j? soumis ce challenge.")
+        messages.info(request, "Vous avez deja soumis ce challenge.")
         return redirect("inscription:challenges_portal")
     if created:
-        messages.info(request, "Challenge d?marr?. Le temps est en cours.")
+        messages.info(request, "Challenge demarre. Le temps est en cours.")
     return redirect("inscription:challenge_solve", challenge_id=challenge.id)
 
 
 @require_http_methods(["GET", "POST"])
 def challenge_solve(request, challenge_id):
     if not _is_challenge_portal_enabled():
-        messages.warning(request, "Le module Challenges est actuellement d?sactiv? par l'administration.")
+        messages.warning(request, "Le module Challenges est actuellement desactive par l'administration.")
         return redirect("inscription:home")
 
     candidat = _get_challenge_candidate(request)
@@ -674,20 +675,20 @@ def challenge_solve(request, challenge_id):
     challenge = get_object_or_404(Challenge, pk=challenge_id, is_published=True, published_until__gte=timezone.now())
     questions = list(challenge.questions.all())
     if not questions:
-        messages.warning(request, "Ce challenge n'a pas de QCM configur?.")
+        messages.warning(request, "Ce challenge n'a pas de QCM configure.")
         return redirect("inscription:challenges_portal")
 
     submission = ChallengeSubmission.objects.filter(challenge=challenge, candidat=candidat).first()
     if not submission:
-        messages.info(request, "Veuillez d?marrer le challenge avant de r?pondre.")
+        messages.info(request, "Veuillez demarrer le challenge avant de repondre.")
         return redirect("inscription:challenges_portal")
     if submission.is_submitted:
-        messages.info(request, "Ce challenge est d?j? soumis.")
+        messages.info(request, "Ce challenge est deja soumis.")
         return redirect("inscription:challenges_portal")
 
     remaining_seconds = max(0, int((challenge.published_until - timezone.now()).total_seconds()))
     if remaining_seconds == 0:
-        messages.warning(request, "La fen?tre de validit? de ce challenge a expir?.")
+        messages.warning(request, "La fenetre de validite de ce challenge a expire.")
         return redirect("inscription:challenges_portal")
 
     elapsed_live = max(0, int((timezone.now() - submission.started_at).total_seconds()))
@@ -715,7 +716,7 @@ def challenge_solve(request, challenge_id):
         submission.score = score_on_20
         submission.finalize_submission()
         submission.save()
-        messages.success(request, f"Challenge soumis avec succ?s. Score obtenu: {score_on_20}/20.")
+        messages.success(request, f"Challenge soumis avec succes. Score obtenu: {score_on_20}/20.")
         return redirect("inscription:challenges_portal")
 
     return render(
@@ -734,6 +735,8 @@ def challenge_solve(request, challenge_id):
                 for question in questions
             ],
             "elapsed_live": _format_duration(elapsed_live),
+            "elapsed_live_seconds": elapsed_live,
+            "remaining_seconds": remaining_seconds,
             "remaining_label": f"{remaining_seconds // 3600:02d}h {(remaining_seconds % 3600) // 60:02d}min",
         },
     )

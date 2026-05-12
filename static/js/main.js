@@ -47,6 +47,70 @@
         }, 25);
     });
 
+    function pad2(value) {
+        return String(Math.max(0, value)).padStart(2, '0');
+    }
+
+    function formatRemainingLabel(totalSeconds) {
+        const total = Math.max(0, parseInt(totalSeconds || 0, 10));
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        return `${pad2(hours)}h ${pad2(minutes)}min`;
+    }
+
+    function formatElapsedLabel(totalSeconds) {
+        const total = Math.max(0, parseInt(totalSeconds || 0, 10));
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const seconds = total % 60;
+        if (hours > 0) {
+            return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
+        }
+        return `${pad2(minutes)}:${pad2(seconds)}`;
+    }
+
+    function initChallengeLiveTimers() {
+        const countdownNodes = Array.from(document.querySelectorAll('[data-countdown-seconds]'));
+        const elapsedNodes = Array.from(document.querySelectorAll('[data-elapsed-seconds]'));
+        if (!countdownNodes.length && !elapsedNodes.length) return;
+
+        const countdownState = countdownNodes.map((node) => ({
+            node,
+            seconds: Math.max(0, parseInt(node.dataset.countdownSeconds || '0', 10)),
+            shouldReloadWhenDone: node.dataset.expireReload === '1',
+        }));
+        const elapsedState = elapsedNodes.map((node) => ({
+            node,
+            seconds: Math.max(0, parseInt(node.dataset.elapsedSeconds || '0', 10)),
+        }));
+
+        const tick = () => {
+            let shouldReload = false;
+
+            countdownState.forEach((item) => {
+                item.node.textContent = formatRemainingLabel(item.seconds);
+                if (item.seconds <= 0 && item.shouldReloadWhenDone) {
+                    shouldReload = true;
+                }
+                item.seconds = Math.max(0, item.seconds - 1);
+            });
+
+            elapsedState.forEach((item) => {
+                item.node.textContent = formatElapsedLabel(item.seconds);
+                item.seconds += 1;
+            });
+
+            if (shouldReload) {
+                window.location.reload();
+            }
+        };
+
+        tick();
+        window.setInterval(tick, 1000);
+    }
+
+    initChallengeLiveTimers();
+
     const form = document.getElementById('inscriptionForm');
     if (!form) return;
 

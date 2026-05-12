@@ -452,7 +452,7 @@ class AFTECAdminSite(AdminSite):
         return custom_urls + urls
 
     def challenges_hub(self, request):
-        
+        """Hub de gestion des Challenges"""
         try:
             Challenge.bootstrap_defaults()
             Challenge.expire_outdated()
@@ -467,7 +467,7 @@ class AFTECAdminSite(AdminSite):
                     settings_obj.is_enabled = desired_value
                     settings_obj.save(update_fields=["is_enabled", "updated_at"])
                     label = "activé" if desired_value else "désactivé"
-                    # Utilisation de messages via request
+                    
                     from django.contrib import messages
                     messages.success(request, f"Onglet Challenges {label} côté utilisateurs.")
                     return redirect("admin:challenges_hub")
@@ -475,19 +475,28 @@ class AFTECAdminSite(AdminSite):
                 elif action in {"publish_challenge", "unpublish_challenge"}:
                     challenge_id = request.POST.get("challenge_id")
                     challenge = Challenge.objects.filter(pk=challenge_id).first()
+                    
                     if not challenge:
                         from django.contrib import messages
                         messages.warning(request, "Challenge introuvable.")
                         return redirect("admin:challenges_hub")
 
                     if action == "publish_challenge":
-                        if not challenge.challenge_pdf:
+                        # Vérification selon ta logique actuelle
+                        if not challenge.questions.exists():        # ou challenge.challenge_pdf selon ton modèle
                             from django.contrib import messages
-                            messages.warning(request, "Ajoutez d'abord le PDF du challenge avant publication.")
+                            messages.warning(
+                                request, 
+                                "Ajoutez d'abord les questions QCM du challenge avant publication."
+                            )
                             return redirect("admin:challenges_hub")
+                        
                         challenge.publish_for_48h()
                         from django.contrib import messages
-                        messages.success(request, f"{challenge.title} publié pour 48h.")
+                        messages.success(
+                            request, 
+                            f"{challenge.title} publié pour 48h (jusqu'au {challenge.published_until:%d/%m/%Y %H:%M})."
+                        )
                     else:
                         challenge.unpublish()
                         from django.contrib import messages
@@ -495,11 +504,15 @@ class AFTECAdminSite(AdminSite):
                     
                     return redirect("admin:challenges_hub")
 
-            # === Affichage GET ===
+            # === Partie GET (affichage) ===
             now = timezone.now()
             challenges = list(Challenge.objects.all().order_by("sequence_day"))
 
-            published_ids = [c.id for c in challenges if c.is_published and c.published_until and c.published_until >= now]
+            # Construction des classements
+            published_ids = [
+                c.id for c in challenges 
+                if c.is_published and c.published_until and c.published_until >= now
+            ]
             
             rankings = {}
             if published_ids:

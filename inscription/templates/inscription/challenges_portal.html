@@ -1,0 +1,81 @@
+{% extends "inscription/base.html" %}
+
+{% block title %}AFTEC 2026 | Challenges{% endblock %}
+
+{% block content %}
+<section class="challenge-hero py-4">
+    <div class="container">
+        <div class="challenge-hero-panel" data-aos="fade-up">
+            <div>
+                <p class="challenge-kicker mb-1">Espace participants</p>
+                <h1 class="mb-1">Challenges AFTEC</h1>
+                <p class="mb-0 text-muted">{{ candidat.nom_complet }} | {{ candidat.numero_dossier }}</p>
+            </div>
+            <a href="{% url 'inscription:challenges_logout' %}" class="btn btn-outline-light challenge-logout-btn">Se déconnecter</a>
+        </div>
+    </div>
+</section>
+
+<section class="pb-5">
+    <div class="container">
+        <div class="challenge-grid">
+            {% for item in challenge_cards %}
+                <article class="challenge-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}0">
+                    <div class="challenge-card-head">
+                        <span class="challenge-day">Jour {{ item.challenge.sequence_day }}</span>
+                        <span class="challenge-timer">Temps restant: {{ item.remaining_label }}</span>
+                    </div>
+                    <h3>{{ item.challenge.title }}</h3>
+                    <p class="text-muted">{{ item.challenge.description }}</p>
+                    {% if item.status == "soumis" %}
+                        <div class="challenge-result">
+                            <div><strong>Score obtenu</strong><span>{{ item.score_label }}</span></div>
+                            <div><strong>Temps écoulé</strong><span>{{ item.elapsed_label }}</span></div>
+                        </div>
+                    {% elif item.status == "en_cours" %}
+                        <a href="{% url 'inscription:challenge_solve' item.challenge.id %}" class="btn btn-aftec">Continuer</a>
+                    {% else %}
+                        <form method="post" action="{% url 'inscription:challenge_start' item.challenge.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-aftec">Commencer</button>
+                        </form>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <article class="challenge-card challenge-card-empty">
+                    <h3>Aucun challenge publié</h3>
+                    <p class="mb-0 text-muted">L'administration n'a pas encore publié de challenge actif.</p>
+                </article>
+            {% endfor %}
+        </div>
+
+        {% if completed_rows %}
+            <div class="challenge-history mt-4" data-aos="fade-up">
+                <h4>Mes soumissions</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Challenge</th>
+                                <th>Score</th>
+                                <th>Temps écoulé</th>
+                                <th>Soumis le</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in completed_rows %}
+                                <tr>
+                                    <td>Jour {{ item.submission.challenge.sequence_day }} - {{ item.submission.challenge.title }}</td>
+                                    <td>{{ item.score_label }}</td>
+                                    <td>{{ item.elapsed_label }}</td>
+                                    <td>{{ item.submission.submitted_at|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -33,6 +33,8 @@
     {% else %}
       <p class="aftec-module-empty">Aucun module disponible pour votre profil.</p>
     {% endif %}
+    <a class="aftec-module-home-link" href="{% url 'admin:challenges_hub' %}">Challenges (pilotage)</a>
     <a class="aftec-module-export-btn" href="{% url 'admin:retained_candidates_pdf' %}">Télécharger liste des retenus</a>
   </div>
 </nav>
+

@@ -1,0 +1,157 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<style>
+  .challenge-admin-wrap { display: grid; gap: 14px; }
+  .challenge-admin-card { background:#fff; border:1px solid #e4eaf1; border-radius:14px; box-shadow:0 12px 28px rgba(13,41,67,.08); overflow:hidden; }
+  .challenge-admin-head { padding:14px 16px; background:linear-gradient(120deg,#133e64,#2f6a8e); color:#fff; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .challenge-admin-head h2 { margin:0; font-size:1.16rem; }
+  .challenge-admin-body { padding:14px; }
+  .challenge-toggle-pill { padding:7px 12px; border-radius:999px; font-size:.82rem; font-weight:800; }
+  .challenge-toggle-pill.is-on { background:#dff7e7; color:#0f7b3f; border:1px solid #92d6ad; }
+  .challenge-toggle-pill.is-off { background:#fff0f3; color:#b33656; border:1px solid #f0b1c1; }
+  .challenge-table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  .challenge-table th,.challenge-table td { border-bottom:1px solid #e7edf5; padding:8px; vertical-align:top; }
+  .challenge-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .challenge-ranking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .challenge-ranking-card { border:1px solid #e7edf5; border-radius:10px; background:#fff; padding:10px; }
+  .challenge-ranking-card h4 { margin:0 0 8px; font-size:.94rem; color:#17354f; }
+  .challenge-empty { color:#6b7f95; font-size:.86rem; margin:0; }
+  @media (max-width: 1080px) { .challenge-ranking-grid { grid-template-columns:1fr; } }
+</style>
+
+<section class="challenge-admin-wrap">
+  <article class="challenge-admin-card">
+    <header class="challenge-admin-head">
+      <div>
+        <h2>Pilotage Challenges</h2>
+        <p style="margin:4px 0 0;opacity:.92;font-size:.88rem;">Activation globale + publication par challenge (validité 48h)</p>
+      </div>
+      <span class="challenge-toggle-pill {% if settings_obj.is_enabled %}is-on{% else %}is-off{% endif %}">
+        {% if settings_obj.is_enabled %}Onglet utilisateur ACTIF{% else %}Onglet utilisateur INACTIF{% endif %}
+      </span>
+    </header>
+    <div class="challenge-admin-body">
+      <form method="post" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="toggle_portal">
+        {% if settings_obj.is_enabled %}
+          <input type="hidden" name="enabled" value="0">
+          <button type="submit" class="button" style="background:#E94560;color:#fff;">Désactiver l'onglet Challenges</button>
+        {% else %}
+          <input type="hidden" name="enabled" value="1">
+          <button type="submit" class="button" style="background:#0F9B58;color:#fff;">Activer l'onglet Challenges</button>
+        {% endif %}
+      </form>
+    </div>
+  </article>
+
+  <article class="challenge-admin-card">
+    <header class="challenge-admin-head">
+      <h2>Gestion des 8 challenges (Jour 3 à Jour 10)</h2>
+      <span style="font-size:.82rem;opacity:.9;">Publication automatique: 48 heures</span>
+    </header>
+    <div class="challenge-admin-body">
+      <table class="challenge-table">
+        <thead>
+          <tr>
+            <th>Jour</th>
+            <th>Titre</th>
+            <th>PDF</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for challenge in challenges %}
+            <tr>
+              <td><strong>Jour {{ challenge.sequence_day }}</strong></td>
+              <td>
+                <strong>{{ challenge.title }}</strong><br>
+                <small style="color:#5d6d82;">{{ challenge.description }}</small>
+              </td>
+              <td>
+                {% if challenge.challenge_pdf %}
+                  <a href="{{ challenge.challenge_pdf.url }}" target="_blank">Voir PDF</a>
+                {% else %}
+                  <span style="color:#b33656;">Non ajouté</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if challenge.is_published and challenge.published_until and challenge.published_until >= now %}
+                  <span style="color:#0F9B58;font-weight:700;">Publié</span><br>
+                  <small>Expire le {{ challenge.published_until|date:"d/m/Y H:i" }}</small>
+                {% else %}
+                  <span style="color:#6b7f95;">Non publié</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="challenge-actions">
+                  <a class="button" href="{% url 'admin:inscription_challenge_change' challenge.id %}">Éditer</a>
+                  {% if challenge.is_published and challenge.published_until and challenge.published_until >= now %}
+                    <form method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="unpublish_challenge">
+                      <input type="hidden" name="challenge_id" value="{{ challenge.id }}">
+                      <button type="submit" class="button" style="background:#E94560;color:#fff;">Retirer</button>
+                    </form>
+                  {% else %}
+                    <form method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="publish_challenge">
+                      <input type="hidden" name="challenge_id" value="{{ challenge.id }}">
+                      <button type="submit" class="button" style="background:#0F9B58;color:#fff;">Publier 48h</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="challenge-admin-card">
+    <header class="challenge-admin-head">
+      <h2>Classements des challenges publiés</h2>
+      <span style="font-size:.82rem;opacity:.9;">Ordre: score décroissant, temps croissant</span>
+    </header>
+    <div class="challenge-admin-body">
+      <div class="challenge-ranking-grid">
+        {% for item in challenge_rankings %}
+            <div class="challenge-ranking-card">
+              <h4>Jour {{ item.challenge.sequence_day }} - {{ item.challenge.title }}</h4>
+              {% if item.rows %}
+                <table class="challenge-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Nom complet</th>
+                      <th>Score</th>
+                      <th>Temps</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in item.rows %}
+                      <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ row.nom }}</td>
+                        <td>{{ row.score }}</td>
+                        <td>{{ row.temps }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <p class="challenge-empty">Aucune soumission pour ce challenge publié.</p>
+              {% endif %}
+            </div>
+        {% empty %}
+          <p class="challenge-empty">Aucun challenge publié actuellement, donc aucun classement à afficher.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </article>
+</section>
+{% endblock %}

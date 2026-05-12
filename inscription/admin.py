@@ -13,8 +13,10 @@ from django.conf import settings
 from django.db.models import Avg, Count
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse
+from django.shortcuts import redirect, render
 from django.urls import path
 from django.utils.html import format_html
+from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -23,7 +25,17 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from .models import Candidat, Consentement, Documents, NotesAcademiques, QuizReponse, StatutCandidat
+from .models import (
+    Candidat,
+    Challenge,
+    ChallengePortalSettings,
+    ChallengeSubmission,
+    Consentement,
+    Documents,
+    NotesAcademiques,
+    QuizReponse,
+    StatutCandidat,
+)
 from .services import send_decision_email
 
 
@@ -426,12 +438,103 @@ class AFTECAdminSite(AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path(
+                "challenges/",
+                self.admin_view(self.challenges_hub),
+                name="challenges_hub",
+            ),
+            path(
                 "exports/candidats-retenus/pdf/",
                 self.admin_view(self.export_retenus_pdf),
                 name="retained_candidates_pdf",
             )
         ]
         return custom_urls + urls
+
+    def challenges_hub(self, request):
+        Challenge.bootstrap_defaults()
+        Challenge.expire_outdated()
+        settings_obj = ChallengePortalSettings.get_solo()
+
+        if request.method == "POST":
+            action = (request.POST.get("action") or "").strip()
+            if action == "toggle_portal":
+                desired_value = request.POST.get("enabled") == "1"
+                settings_obj.is_enabled = desired_value
+                settings_obj.save(update_fields=["is_enabled", "updated_at"])
+                label = "activé" if desired_value else "désactivé"
+                self.message_user(request, f"Onglet Challenges {label} côté utilisateurs.", level=messages.SUCCESS)
+                return redirect("admin:challenges_hub")
+
+            if action in {"publish_challenge", "unpublish_challenge"}:
+                challenge_id = request.POST.get("challenge_id")
+                challenge = Challenge.objects.filter(pk=challenge_id).first()
+                if not challenge:
+                    self.message_user(request, "Challenge introuvable.", level=messages.WARNING)
+                    return redirect("admin:challenges_hub")
+                if action == "publish_challenge":
+                    if not challenge.challenge_pdf:
+                        self.message_user(
+                            request,
+                            "Ajoutez d'abord le PDF du challenge avant publication.",
+                            level=messages.WARNING,
+                        )
+                        return redirect("admin:challenges_hub")
+                    challenge.publish_for_48h()
+                    self.message_user(
+                        request,
+                        f"{challenge.title} publié pour 48h (jusqu'au {challenge.published_until:%d/%m/%Y %H:%M}).",
+                        level=messages.SUCCESS,
+                    )
+                else:
+                    challenge.unpublish()
+                    self.message_user(request, f"{challenge.title} retiré de l'espace participants.", level=messages.SUCCESS)
+                return redirect("admin:challenges_hub")
+
+        now = timezone.now()
+        challenges = list(Challenge.objects.all().order_by("sequence_day"))
+        published_ids = [item.id for item in challenges if item.is_published and item.published_until and item.published_until >= now]
+
+        rankings = {}
+        if published_ids:
+            submissions = (
+                ChallengeSubmission.objects.select_related("candidat", "challenge")
+                .filter(challenge_id__in=published_ids, submitted_at__isnull=False)
+                .order_by("challenge__sequence_day", "elapsed_seconds", "submitted_at")
+            )
+            for submission in submissions:
+                rankings.setdefault(submission.challenge_id, []).append(submission)
+            for challenge_id, grouped_submissions in rankings.items():
+                grouped_submissions.sort(
+                    key=lambda item: (
+                        item.score is None,
+                        -(float(item.score) if item.score is not None else 0.0),
+                        item.elapsed_seconds,
+                        item.submitted_at or timezone.now(),
+                    )
+                )
+                rankings[challenge_id] = [
+                    {
+                        "nom": item.candidat.nom_complet,
+                        "score": "-" if item.score is None else f"{float(item.score):.2f}",
+                        "temps": self._format_duration(item.elapsed_seconds),
+                    }
+                    for item in grouped_submissions
+                ]
+        challenge_rankings = [
+            {"challenge": challenge, "rows": rankings.get(challenge.id, [])}
+            for challenge in challenges
+            if challenge.is_published and challenge.published_until and challenge.published_until >= now
+        ]
+
+        context = dict(
+            self.each_context(request),
+            title="Challenges",
+            settings_obj=settings_obj,
+            challenges=challenges,
+            challenge_rankings=challenge_rankings,
+            now=now,
+        )
+        return render(request, "admin/challenges_hub.html", context)
 
     def export_retenus_pdf(self, request):
         retenus = (
@@ -815,3 +918,25 @@ class StatutCandidatAdmin(admin.ModelAdmin):
                 f"Échec d'envoi email ({exc}). La case 'email envoyé' a été décochée automatiquement.",
                 level=messages.WARNING,
             )
+
+@admin.register(Challenge, site=aftec_admin_site)
+class ChallengeAdmin(admin.ModelAdmin):
+    list_display = ("sequence_day", "title", "is_published", "published_at", "published_until", "updated_at")
+    list_filter = ("is_published", "sequence_day")
+    search_fields = ("title", "description")
+    readonly_fields = ("published_at", "published_until", "created_at", "updated_at")
+    ordering = ("sequence_day",)
+
+
+@admin.register(ChallengeSubmission, site=aftec_admin_site)
+class ChallengeSubmissionAdmin(admin.ModelAdmin):
+    list_display = ("challenge", "candidat", "score", "elapsed_seconds", "started_at", "submitted_at")
+    list_filter = ("challenge__sequence_day", "submitted_at")
+    search_fields = ("candidat__nom", "candidat__prenom", "candidat__numero_dossier", "challenge__title")
+    readonly_fields = ("started_at", "submitted_at", "elapsed_seconds", "created_at", "updated_at")
+    autocomplete_fields = ("candidat", "challenge")
+
+
+@admin.register(ChallengePortalSettings, site=aftec_admin_site)
+class ChallengePortalSettingsAdmin(admin.ModelAdmin):
+    list_display = ("is_enabled", "updated_at")

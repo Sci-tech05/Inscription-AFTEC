@@ -1,0 +1,40 @@
+{% extends "inscription/base.html" %}
+
+{% block title %}AFTEC 2026 | Résolution Challenge{% endblock %}
+
+{% block content %}
+<section class="py-4">
+    <div class="container">
+        <div class="challenge-workspace" data-aos="fade-up">
+            <div class="challenge-workspace-head">
+                <div>
+                    <p class="challenge-kicker mb-1">Jour {{ challenge.sequence_day }}</p>
+                    <h2 class="mb-1">{{ challenge.title }}</h2>
+                    <p class="mb-0 text-muted">Temps restant: {{ remaining_label }} | Temps écoulé: {{ elapsed_live }}</p>
+                </div>
+                <a href="{% url 'inscription:challenges_portal' %}" class="btn btn-outline-light">Retour</a>
+            </div>
+
+            <div class="challenge-doc-box">
+                <p class="mb-2"><strong>Document du challenge (PDF)</strong></p>
+                <a class="btn btn-aftec" href="{{ challenge.challenge_pdf.url }}" target="_blank">Ouvrir le PDF</a>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="mt-4">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ form.answer_text.label_tag }}
+                    {{ form.answer_text }}
+                    {{ form.answer_text.errors }}
+                </div>
+                <div class="mb-3">
+                    {{ form.answer_file.label_tag }}
+                    {{ form.answer_file }}
+                    {{ form.answer_file.errors }}
+                </div>
+                <button type="submit" class="btn btn-aftec">Soumettre ma réponse</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

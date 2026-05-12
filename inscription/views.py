@@ -8,6 +8,9 @@ from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_http_methods
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -16,8 +19,19 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from .forms import InscriptionMultiStepForm
-from .models import Candidat, Consentement, Documents, NotesAcademiques, QuizQuestion, QuizReponse, StatutCandidat
+from .forms import ChallengeLoginForm, ChallengeSubmissionForm, InscriptionMultiStepForm
+from .models import (
+    Candidat,
+    Challenge,
+    ChallengePortalSettings,
+    ChallengeSubmission,
+    Consentement,
+    Documents,
+    NotesAcademiques,
+    QuizQuestion,
+    QuizReponse,
+    StatutCandidat,
+)
 
 
 QUIZ_CATEGORY_ORDER = [
@@ -38,6 +52,33 @@ CATEGORY_MAX_SCORES = {
     "entrepreneuriat": 5,
     "divers": 5,
 }
+
+CHALLENGE_SESSION_KEY = "challenge_candidate_id"
+
+
+def _format_duration(seconds):
+    total = max(0, int(seconds or 0))
+    hours = total // 3600
+    minutes = (total % 3600) // 60
+    secs = total % 60
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
+
+
+def _normalize_full_name(value):
+    return " ".join((value or "").strip().lower().split())
+
+
+def _get_challenge_candidate(request):
+    candidate_id = request.session.get(CHALLENGE_SESSION_KEY)
+    if not candidate_id:
+        return None
+    return Candidat.objects.filter(pk=candidate_id).first()
+
+
+def _is_challenge_portal_enabled():
+    return ChallengePortalSettings.get_solo().is_enabled
 
 
 def home(request):
@@ -470,6 +511,206 @@ def confirmation_pdf(request, candidat_id):
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="formulaire_inscription_{candidat.numero_dossier}.pdf"'
     return response
+
+
+@require_http_methods(["GET", "POST"])
+def challenges_login(request):
+    if not _is_challenge_portal_enabled():
+        messages.warning(request, "Le module Challenges est actuellement désactivé par l'administration.")
+        return redirect("inscription:home")
+
+    if _get_challenge_candidate(request):
+        return redirect("inscription:challenges_portal")
+
+    next_url = (request.GET.get("next") or request.POST.get("next") or "").strip()
+    if not next_url.startswith("/"):
+        next_url = ""
+
+    form = ChallengeLoginForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        numero_dossier = (form.cleaned_data["numero_dossier"] or "").strip().upper()
+        candidat = Candidat.objects.filter(numero_dossier__iexact=numero_dossier).first()
+        if not candidat:
+            form.add_error("numero_dossier", "Numéro de dossier introuvable.")
+        else:
+            entered_name = _normalize_full_name(form.cleaned_data["nom_complet"])
+            expected_1 = _normalize_full_name(f"{candidat.prenom} {candidat.nom}")
+            expected_2 = _normalize_full_name(f"{candidat.nom} {candidat.prenom}")
+            if entered_name not in {expected_1, expected_2}:
+                form.add_error("nom_complet", "Nom complet incorrect pour ce numéro de dossier.")
+            else:
+                request.session[CHALLENGE_SESSION_KEY] = candidat.id
+                request.session.modified = True
+                messages.success(request, f"Connexion réussie. Bienvenue {candidat.nom_complet}.")
+                return redirect(next_url or "inscription:challenges_portal")
+
+    return render(
+        request,
+        "inscription/challenges_login.html",
+        {
+            "form": form,
+            "next_url": next_url,
+        },
+    )
+
+
+def challenges_logout(request):
+    if CHALLENGE_SESSION_KEY in request.session:
+        del request.session[CHALLENGE_SESSION_KEY]
+        request.session.modified = True
+    messages.info(request, "Vous avez été déconnecté de l'espace Challenges.")
+    return redirect("inscription:home")
+
+
+def challenges_portal(request):
+    if not _is_challenge_portal_enabled():
+        messages.warning(request, "Le module Challenges est actuellement désactivé par l'administration.")
+        return redirect("inscription:home")
+
+    candidat = _get_challenge_candidate(request)
+    if not candidat:
+        return redirect(f"{reverse('inscription:challenges_login')}?next={reverse('inscription:challenges_portal')}")
+
+    Challenge.bootstrap_defaults()
+    Challenge.expire_outdated()
+
+    now = timezone.now()
+    active_challenges = list(
+        Challenge.objects.filter(is_published=True, published_until__gte=now).order_by("sequence_day")
+    )
+    candidate_submissions = {
+        item.challenge_id: item
+        for item in ChallengeSubmission.objects.select_related("challenge").filter(candidat=candidat)
+    }
+
+    challenge_cards = []
+    for challenge in active_challenges:
+        submission = candidate_submissions.get(challenge.id)
+        remaining_seconds = max(0, int((challenge.published_until - now).total_seconds()))
+        remaining_hours = remaining_seconds // 3600
+        remaining_minutes = (remaining_seconds % 3600) // 60
+        status = "non_commence"
+        if submission and submission.is_submitted:
+            status = "soumis"
+        elif submission:
+            status = "en_cours"
+
+        challenge_cards.append(
+            {
+                "challenge": challenge,
+                "remaining_label": f"{remaining_hours:02d}h {remaining_minutes:02d}min",
+                "submission": submission,
+                "status": status,
+                "score_label": "-" if not submission or submission.score is None else f"{float(submission.score):.2f}",
+                "elapsed_label": _format_duration(submission.elapsed_seconds if submission else 0),
+            }
+        )
+
+    completed_submissions = sorted(
+        [item for item in candidate_submissions.values() if item.is_submitted],
+        key=lambda sub: sub.submitted_at or timezone.now(),
+        reverse=True,
+    )
+    completed_rows = [
+        {
+            "submission": sub,
+            "elapsed_label": _format_duration(sub.elapsed_seconds),
+            "score_label": "-" if sub.score is None else f"{float(sub.score):.2f}",
+        }
+        for sub in completed_submissions
+    ]
+
+    return render(
+        request,
+        "inscription/challenges_portal.html",
+        {
+            "candidat": candidat,
+            "challenge_cards": challenge_cards,
+            "completed_rows": completed_rows,
+        },
+    )
+
+
+@require_POST
+def challenge_start(request, challenge_id):
+    if not _is_challenge_portal_enabled():
+        messages.warning(request, "Le module Challenges est actuellement désactivé par l'administration.")
+        return redirect("inscription:home")
+
+    candidat = _get_challenge_candidate(request)
+    if not candidat:
+        return redirect("inscription:challenges_login")
+
+    Challenge.expire_outdated()
+    challenge = get_object_or_404(Challenge, pk=challenge_id, is_published=True, published_until__gte=timezone.now())
+    if not challenge.challenge_pdf:
+        messages.warning(request, "Ce challenge n'a pas encore de document PDF disponible.")
+        return redirect("inscription:challenges_portal")
+
+    submission, created = ChallengeSubmission.objects.get_or_create(
+        challenge=challenge,
+        candidat=candidat,
+        defaults={"started_at": timezone.now()},
+    )
+    if submission.is_submitted:
+        messages.info(request, "Vous avez déjà soumis ce challenge.")
+        return redirect("inscription:challenges_portal")
+    if created:
+        messages.info(request, "Challenge démarré. Le temps est en cours.")
+    return redirect("inscription:challenge_solve", challenge_id=challenge.id)
+
+
+@require_http_methods(["GET", "POST"])
+def challenge_solve(request, challenge_id):
+    if not _is_challenge_portal_enabled():
+        messages.warning(request, "Le module Challenges est actuellement désactivé par l'administration.")
+        return redirect("inscription:home")
+
+    candidat = _get_challenge_candidate(request)
+    if not candidat:
+        return redirect("inscription:challenges_login")
+
+    Challenge.expire_outdated()
+    challenge = get_object_or_404(Challenge, pk=challenge_id, is_published=True, published_until__gte=timezone.now())
+    if not challenge.challenge_pdf:
+        messages.warning(request, "Le PDF de ce challenge n'est plus disponible.")
+        return redirect("inscription:challenges_portal")
+    submission = ChallengeSubmission.objects.filter(challenge=challenge, candidat=candidat).first()
+    if not submission:
+        messages.info(request, "Veuillez démarrer le challenge avant de répondre.")
+        return redirect("inscription:challenges_portal")
+    if submission.is_submitted:
+        messages.info(request, "Ce challenge est déjà soumis.")
+        return redirect("inscription:challenges_portal")
+
+    remaining_seconds = max(0, int((challenge.published_until - timezone.now()).total_seconds()))
+    if remaining_seconds == 0:
+        messages.warning(request, "La fenêtre de validité de ce challenge a expiré.")
+        return redirect("inscription:challenges_portal")
+
+    elapsed_live = max(0, int((timezone.now() - submission.started_at).total_seconds()))
+
+    form = ChallengeSubmissionForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        submission.answer_text = form.cleaned_data["answer_text"]
+        submission.answer_file = form.cleaned_data.get("answer_file")
+        submission.finalize_submission()
+        submission.save()
+        messages.success(request, "Challenge soumis avec succès. Le jury publiera le score après correction.")
+        return redirect("inscription:challenges_portal")
+
+    return render(
+        request,
+        "inscription/challenge_solve.html",
+        {
+            "candidat": candidat,
+            "challenge": challenge,
+            "submission": submission,
+            "form": form,
+            "elapsed_live": _format_duration(elapsed_live),
+            "remaining_label": f"{remaining_seconds // 3600:02d}h {(remaining_seconds % 3600) // 60:02d}min",
+        },
+    )
 
 
 def quiz_info(request):

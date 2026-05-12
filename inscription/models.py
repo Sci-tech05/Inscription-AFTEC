@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -21,6 +22,12 @@ def validate_file_extension(file_obj):
     name = file_obj.name.lower()
     if not any(name.endswith(ext) for ext in allowed_extensions):
         raise ValidationError("Format non autorisé. Utilisez PDF, JPG ou PNG.")
+
+
+def validate_pdf_extension(file_obj):
+    name = (file_obj.name or "").lower()
+    if not name.endswith(".pdf"):
+        raise ValidationError("Seuls les fichiers PDF sont autorisés.")
 
 
 class Candidat(models.Model):
@@ -252,6 +259,141 @@ class QuizReponse(models.Model):
 
     def __str__(self):
         return f"Quiz de {self.candidat.nom_complet} ({self.score_total} points)"
+
+
+class ChallengePortalSettings(models.Model):
+    is_enabled = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Parametre challenges"
+        verbose_name_plural = "Parametres challenges"
+
+    @classmethod
+    def get_solo(cls):
+        obj = cls.objects.order_by("id").first()
+        if obj:
+            return obj
+        return cls.objects.create()
+
+    def __str__(self):
+        return "Challenges actifs" if self.is_enabled else "Challenges inactifs"
+
+
+class Challenge(models.Model):
+    DAY_CHOICES = tuple((day, f"Jour {day}") for day in range(3, 11))
+
+    sequence_day = models.PositiveSmallIntegerField(choices=DAY_CHOICES, unique=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    challenge_pdf = models.FileField(
+        upload_to="challenges/pdfs/",
+        validators=[validate_pdf_extension, validate_file_size],
+        blank=True,
+    )
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("sequence_day",)
+        verbose_name = "Challenge"
+        verbose_name_plural = "Challenges"
+
+    @classmethod
+    def bootstrap_defaults(cls):
+        defaults_map = {
+            3: "Challenge 1 - Jour 3 : Installation Arduino IDE & Arduino UNO",
+            4: "Challenge 2 - Jour 4 : LED, PWM et bases pratiques Arduino",
+            5: "Challenge 3 - Jour 5 : Mini-projet 1 & capteurs environnementaux",
+            6: "Challenge 4 - Jour 6 : Mini-projet 2 & capteurs (approche projet)",
+            7: "Challenge 5 - Jour 7 : Buzzer, Tilt et logique d'evenements",
+            8: "Challenge 6 - Jour 8 : Boutons, RFID et servo-moteur",
+            9: "Challenge 7 - Jour 9 : Shift register, servo et orchestration",
+            10: "Challenge 8 - Jour 10 : Mini-projet LCD & microcontroleurs alternatifs",
+        }
+        for day in range(3, 11):
+            cls.objects.get_or_create(
+                sequence_day=day,
+                defaults={
+                    "title": defaults_map[day],
+                    "description": "Module challenge AFTEC (QCM / pratique) pour la sequence du jour.",
+                },
+            )
+
+    @classmethod
+    def expire_outdated(cls):
+        cls.objects.filter(is_published=True, published_until__lt=timezone.now()).update(is_published=False)
+
+    @property
+    def is_active_now(self):
+        if not self.is_published or not self.published_until:
+            return False
+        return self.published_until >= timezone.now()
+
+    @property
+    def remaining_seconds(self):
+        if not self.is_active_now:
+            return 0
+        return int((self.published_until - timezone.now()).total_seconds())
+
+    def publish_for_48h(self):
+        now = timezone.now()
+        self.is_published = True
+        self.published_at = now
+        self.published_until = now + timedelta(hours=48)
+        self.save(update_fields=["is_published", "published_at", "published_until", "updated_at"])
+
+    def unpublish(self):
+        self.is_published = False
+        self.save(update_fields=["is_published", "updated_at"])
+
+    def __str__(self):
+        return f"Jour {self.sequence_day} - {self.title}"
+
+
+class ChallengeSubmission(models.Model):
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="submissions")
+    candidat = models.ForeignKey(Candidat, on_delete=models.CASCADE, related_name="challenge_submissions")
+    started_at = models.DateTimeField(default=timezone.now)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    elapsed_seconds = models.PositiveIntegerField(default=0)
+    answer_text = models.TextField(blank=True)
+    answer_file = models.FileField(
+        upload_to="challenges/reponses/",
+        blank=True,
+        validators=[validate_file_extension, validate_file_size],
+    )
+    score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    jury_comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("challenge", "candidat")
+        ordering = ("challenge__sequence_day", "elapsed_seconds")
+        verbose_name = "Soumission challenge"
+        verbose_name_plural = "Soumissions challenges"
+
+    @property
+    def is_submitted(self):
+        return self.submitted_at is not None
+
+    def finalize_submission(self):
+        end_time = timezone.now()
+        self.submitted_at = end_time
+        self.elapsed_seconds = max(0, int((end_time - self.started_at).total_seconds()))
+
+    def __str__(self):
+        return f"{self.candidat.nom_complet} | Jour {self.challenge.sequence_day}"
 
 
 class StatutCandidat(models.Model):

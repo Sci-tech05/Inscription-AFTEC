@@ -28,6 +28,9 @@
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    {% if challenge_nav_enabled %}
+                        <li class="nav-item"><a class="nav-link nav-link-premium" href="{% url 'inscription:challenges_portal' %}">Challenges</a></li>
+                    {% endif %}
                     <li class="nav-item ms-lg-2"><a class="btn btn-aftec" href="{% url 'inscription:formulaire' %}">Formulaire d'inscription</a></li>
                     <li class="nav-item me-lg-2">
                         <button type="button" id="themeToggle" class="theme-icon-btn" aria-label="Activer le mode sombre" title="Activer le mode sombre">

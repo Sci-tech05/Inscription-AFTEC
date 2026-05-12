@@ -1,0 +1,29 @@
+{% extends "inscription/base.html" %}
+
+{% block title %}AFTEC 2026 | Connexion Challenges{% endblock %}
+
+{% block content %}
+<section class="challenge-auth-wrap py-5">
+    <div class="container">
+        <div class="challenge-auth-card mx-auto" data-aos="zoom-in">
+            <h2 class="mb-2">Connexion Challenges</h2>
+            <p class="text-muted mb-4">Identifiez-vous avec votre nom complet et votre numéro de dossier AFTEC.</p>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <div class="mb-3">
+                    {{ form.nom_complet.label_tag }}
+                    {{ form.nom_complet }}
+                    {{ form.nom_complet.errors }}
+                </div>
+                <div class="mb-3">
+                    {{ form.numero_dossier.label_tag }}
+                    {{ form.numero_dossier }}
+                    {{ form.numero_dossier.errors }}
+                </div>
+                <button class="btn btn-aftec w-100" type="submit">Se connecter</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

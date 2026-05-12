@@ -4,10 +4,18 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.admin.options import ModelAdmin
+from django.urls import reverse
 from django.test import RequestFactory, TestCase
 
 from inscription.admin import CandidatAdmin, StatutCandidatAdmin, aftec_admin_site
-from inscription.models import Candidat, NotesAcademiques, QuizReponse, StatutCandidat
+from inscription.models import (
+    Candidat,
+    Challenge,
+    ChallengePortalSettings,
+    NotesAcademiques,
+    QuizReponse,
+    StatutCandidat,
+)
 
 
 class CandidatAdminStatusEmailTests(TestCase):
@@ -167,3 +175,42 @@ class StatutCandidatScoreFormulaTests(TestCase):
             note_motivation=Decimal("9.00"),
         )
         self.assertEqual(statut.score_global_selection, 72.0)
+
+
+class ChallengesPortalTests(TestCase):
+    def setUp(self):
+        self.candidat = Candidat.objects.create(
+            nom="Doe",
+            prenom="Jane",
+            date_naissance=date(2004, 1, 1),
+            sexe="F",
+            telephone="0102030405",
+            email="challenge.jane@example.com",
+            commune_residence="Pobe",
+            etablissement="Lycee Test",
+            classe_niveau="TLE",
+            filiere="Scientifique",
+        )
+        self.settings_obj = ChallengePortalSettings.get_solo()
+        self.settings_obj.is_enabled = True
+        self.settings_obj.save(update_fields=["is_enabled", "updated_at"])
+        Challenge.bootstrap_defaults()
+
+    def test_challenge_portal_redirects_to_login_when_not_connected(self):
+        response = self.client.get(reverse("inscription:challenges_portal"), secure=True)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("inscription:challenges_login"), response.url)
+
+    def test_challenge_login_accepts_valid_credentials(self):
+        response = self.client.post(
+            reverse("inscription:challenges_login"),
+            {
+                "nom_complet": self.candidat.nom_complet,
+                "numero_dossier": self.candidat.numero_dossier,
+            },
+            secure=True,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("inscription:challenges_portal"))
+        session = self.client.session
+        self.assertEqual(session.get("challenge_candidate_id"), self.candidat.id)

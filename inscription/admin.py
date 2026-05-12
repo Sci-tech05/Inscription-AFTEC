@@ -452,44 +452,102 @@ class AFTECAdminSite(AdminSite):
         return custom_urls + urls
 
     def challenges_hub(self, request):
-        Challenge.bootstrap_defaults()
-        Challenge.expire_outdated()
-        settings_obj = ChallengePortalSettings.get_solo()
+        
+        try:
+            Challenge.bootstrap_defaults()
+            Challenge.expire_outdated()
+            
+            settings_obj = ChallengePortalSettings.get_solo()
 
-        if request.method == "POST":
-            action = (request.POST.get("action") or "").strip()
-            if action == "toggle_portal":
-                desired_value = request.POST.get("enabled") == "1"
-                settings_obj.is_enabled = desired_value
-                settings_obj.save(update_fields=["is_enabled", "updated_at"])
-                label = "activé" if desired_value else "désactivé"
-                self.message_user(request, f"Onglet Challenges {label} côté utilisateurs.", level=messages.SUCCESS)
-                return redirect("admin:challenges_hub")
-
-            if action in {"publish_challenge", "unpublish_challenge"}:
-                challenge_id = request.POST.get("challenge_id")
-                challenge = Challenge.objects.filter(pk=challenge_id).first()
-                if not challenge:
-                    self.message_user(request, "Challenge introuvable.", level=messages.WARNING)
+            if request.method == "POST":
+                action = (request.POST.get("action") or "").strip()
+                
+                if action == "toggle_portal":
+                    desired_value = request.POST.get("enabled") == "1"
+                    settings_obj.is_enabled = desired_value
+                    settings_obj.save(update_fields=["is_enabled", "updated_at"])
+                    label = "activé" if desired_value else "désactivé"
+                    # Utilisation de messages via request
+                    from django.contrib import messages
+                    messages.success(request, f"Onglet Challenges {label} côté utilisateurs.")
                     return redirect("admin:challenges_hub")
-                if action == "publish_challenge":
-                    if not challenge.questions.exists():
-                        self.message_user(
-                            request,
-                            "Ajoutez d'abord les questions QCM du challenge avant publication.",
-                            level=messages.WARNING,
-                        )
+
+                elif action in {"publish_challenge", "unpublish_challenge"}:
+                    challenge_id = request.POST.get("challenge_id")
+                    challenge = Challenge.objects.filter(pk=challenge_id).first()
+                    if not challenge:
+                        from django.contrib import messages
+                        messages.warning(request, "Challenge introuvable.")
                         return redirect("admin:challenges_hub")
-                    challenge.publish_for_48h()
-                    self.message_user(
-                        request,
-                        f"{challenge.title} publié pour 48h (jusqu'au {challenge.published_until:%d/%m/%Y %H:%M}).",
-                        level=messages.SUCCESS,
+
+                    if action == "publish_challenge":
+                        if not challenge.challenge_pdf:
+                            from django.contrib import messages
+                            messages.warning(request, "Ajoutez d'abord le PDF du challenge avant publication.")
+                            return redirect("admin:challenges_hub")
+                        challenge.publish_for_48h()
+                        from django.contrib import messages
+                        messages.success(request, f"{challenge.title} publié pour 48h.")
+                    else:
+                        challenge.unpublish()
+                        from django.contrib import messages
+                        messages.success(request, f"{challenge.title} retiré de l'espace participants.")
+                    
+                    return redirect("admin:challenges_hub")
+
+            # === Affichage GET ===
+            now = timezone.now()
+            challenges = list(Challenge.objects.all().order_by("sequence_day"))
+
+            published_ids = [c.id for c in challenges if c.is_published and c.published_until and c.published_until >= now]
+            
+            rankings = {}
+            if published_ids:
+                submissions = ChallengeSubmission.objects.select_related("candidat", "challenge").filter(
+                    challenge_id__in=published_ids,
+                    submitted_at__isnull=False
+                ).order_by("challenge__sequence_day", "elapsed_seconds", "submitted_at")
+                
+                for submission in submissions:
+                    rankings.setdefault(submission.challenge_id, []).append(submission)
+                
+                for challenge_id, items in rankings.items():
+                    items.sort(
+                        key=lambda x: (
+                            x.score is None,
+                            -(float(x.score) if x.score is not None else 0),
+                            x.elapsed_seconds or 999999,
+                            x.submitted_at or timezone.now()
+                        )
                     )
-                else:
-                    challenge.unpublish()
-                    self.message_user(request, f"{challenge.title} retiré de l'espace participants.", level=messages.SUCCESS)
-                return redirect("admin:challenges_hub")
+                    rankings[challenge_id] = [
+                        {
+                            "nom": item.candidat.nom_complet,
+                            "score": "-" if item.score is None else f"{float(item.score):.2f}",
+                            "temps": self._format_duration(item.elapsed_seconds),
+                        }
+                        for item in items
+                    ]
+
+            context = dict(
+                self.each_context(request),
+                title="Challenges",
+                settings_obj=settings_obj,
+                challenges=challenges,
+                challenge_rankings=[
+                    {"challenge": ch, "rows": rankings.get(ch.id, [])}
+                    for ch in challenges
+                    if ch.is_published and ch.published_until and ch.published_until >= now
+                ],
+                now=now,
+            )
+            
+            return render(request, "admin/challenges_hub.html", context)
+
+        except Exception as e:
+            from django.contrib import messages
+            messages.error(request, f"Erreur dans le Challenges Hub : {str(e)}")
+            return redirect("admin:index")
 
         now = timezone.now()
         challenges = list(Challenge.objects.all().order_by("sequence_day"))

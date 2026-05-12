@@ -66,6 +66,26 @@ def _format_duration(seconds):
     return f"{minutes:02d}:{secs:02d}"
 
 
+def _challenge_option_text(question, option_key):
+    mapping = {
+        "A": question.option_a,
+        "B": question.option_b,
+        "C": question.option_c,
+        "D": question.option_d,
+    }
+    return mapping.get((option_key or "").strip().upper(), "")
+
+
+def _challenge_answer_label(question, option_key):
+    key = (option_key or "").strip().upper()
+    if key not in {"A", "B", "C", "D"}:
+        return "Non repondu"
+    option_text = _challenge_option_text(question, key)
+    if not option_text:
+        return key
+    return f"{key}. {option_text}"
+
+
 def _normalize_full_name(value):
     return " ".join((value or "").strip().lower().split())
 
@@ -617,6 +637,20 @@ def challenges_portal(request):
             "submission": sub,
             "elapsed_label": _format_duration(sub.elapsed_seconds),
             "score_label": "-" if sub.score is None else f"{float(sub.score):.2f}",
+            "wrong_answers": [
+                {
+                    "question": question.question,
+                    "user_answer_label": _challenge_answer_label(
+                        question, (sub.answers_json or {}).get(str(question.id), {}).get("reponse_utilisateur")
+                    ),
+                    "correct_answer_label": _challenge_answer_label(
+                        question,
+                        (sub.answers_json or {}).get(str(question.id), {}).get("bonne_reponse") or question.correct_option,
+                    ),
+                }
+                for question in sub.challenge.questions.all()
+                if not (sub.answers_json or {}).get(str(question.id), {}).get("correcte", False)
+            ],
         }
         for sub in completed_submissions
     ]

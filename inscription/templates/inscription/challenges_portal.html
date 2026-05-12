@@ -70,6 +70,28 @@
                                     <td>{{ item.elapsed_label }}</td>
                                     <td>{{ item.submission.submitted_at|date:"d/m/Y H:i" }}</td>
                                 </tr>
+                                <tr>
+                                    <td colspan="4">
+                                        {% if item.wrong_answers %}
+                                            <div class="small">
+                                                <strong>Questions mal repondues :</strong>
+                                                <ol class="mb-0 mt-2 ps-3">
+                                                    {% for wrong in item.wrong_answers %}
+                                                        <li class="mb-2">
+                                                            <div><strong>Question :</strong> {{ wrong.question }}</div>
+                                                            <div><strong>Votre reponse :</strong> {{ wrong.user_answer_label }}</div>
+                                                            <div><strong>Bonne reponse :</strong> {{ wrong.correct_answer_label }}</div>
+                                                        </li>
+                                                    {% endfor %}
+                                                </ol>
+                                            </div>
+                                        {% else %}
+                                            <div class="small text-success">
+                                                Toutes les reponses sont correctes pour ce challenge.
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>

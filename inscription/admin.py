@@ -28,6 +28,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from .models import (
     Candidat,
     Challenge,
+    ChallengeQuestion,
     ChallengePortalSettings,
     ChallengeSubmission,
     Consentement,
@@ -472,10 +473,10 @@ class AFTECAdminSite(AdminSite):
                     self.message_user(request, "Challenge introuvable.", level=messages.WARNING)
                     return redirect("admin:challenges_hub")
                 if action == "publish_challenge":
-                    if not challenge.challenge_pdf:
+                    if not challenge.questions.exists():
                         self.message_user(
                             request,
-                            "Ajoutez d'abord le PDF du challenge avant publication.",
+                            "Ajoutez d'abord les questions QCM du challenge avant publication.",
                             level=messages.WARNING,
                         )
                         return redirect("admin:challenges_hub")
@@ -919,13 +920,41 @@ class StatutCandidatAdmin(admin.ModelAdmin):
                 level=messages.WARNING,
             )
 
+
+
+class ChallengeQuestionInline(admin.TabularInline):
+    model = ChallengeQuestion
+    extra = 0
+    fields = ("order", "question", "option_a", "option_b", "option_c", "option_d", "correct_option")
+    ordering = ("order",)
+
 @admin.register(Challenge, site=aftec_admin_site)
 class ChallengeAdmin(admin.ModelAdmin):
-    list_display = ("sequence_day", "title", "is_published", "published_at", "published_until", "updated_at")
+    list_display = (
+        "sequence_day",
+        "title",
+        "questions_count",
+        "is_published",
+        "published_at",
+        "published_until",
+        "updated_at",
+    )
     list_filter = ("is_published", "sequence_day")
     search_fields = ("title", "description")
     readonly_fields = ("published_at", "published_until", "created_at", "updated_at")
     ordering = ("sequence_day",)
+    inlines = [ChallengeQuestionInline]
+
+    @admin.display(description="Questions")
+    def questions_count(self, obj):
+        return obj.questions.count()
+
+
+@admin.register(ChallengeQuestion, site=aftec_admin_site)
+class ChallengeQuestionAdmin(admin.ModelAdmin):
+    list_display = ("challenge", "order", "question", "correct_option")
+    list_filter = ("challenge__sequence_day",)
+    search_fields = ("question", "challenge__title")
 
 
 @admin.register(ChallengeSubmission, site=aftec_admin_site)

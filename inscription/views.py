@@ -19,7 +19,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from .forms import ChallengeLoginForm, ChallengeSubmissionForm, InscriptionMultiStepForm
+from .forms import ChallengeLoginForm, ChallengeQCMForm, InscriptionMultiStepForm
 from .models import (
     Candidat,
     Challenge,
@@ -634,7 +634,7 @@ def challenges_portal(request):
 @require_POST
 def challenge_start(request, challenge_id):
     if not _is_challenge_portal_enabled():
-        messages.warning(request, "Le module Challenges est actuellement désactivé par l'administration.")
+        messages.warning(request, "Le module Challenges est actuellement d?sactiv? par l'administration.")
         return redirect("inscription:home")
 
     candidat = _get_challenge_candidate(request)
@@ -643,8 +643,8 @@ def challenge_start(request, challenge_id):
 
     Challenge.expire_outdated()
     challenge = get_object_or_404(Challenge, pk=challenge_id, is_published=True, published_until__gte=timezone.now())
-    if not challenge.challenge_pdf:
-        messages.warning(request, "Ce challenge n'a pas encore de document PDF disponible.")
+    if not challenge.questions.exists():
+        messages.warning(request, "Ce challenge n'a pas encore de questions disponibles.")
         return redirect("inscription:challenges_portal")
 
     submission, created = ChallengeSubmission.objects.get_or_create(
@@ -653,17 +653,17 @@ def challenge_start(request, challenge_id):
         defaults={"started_at": timezone.now()},
     )
     if submission.is_submitted:
-        messages.info(request, "Vous avez déjà soumis ce challenge.")
+        messages.info(request, "Vous avez d?j? soumis ce challenge.")
         return redirect("inscription:challenges_portal")
     if created:
-        messages.info(request, "Challenge démarré. Le temps est en cours.")
+        messages.info(request, "Challenge d?marr?. Le temps est en cours.")
     return redirect("inscription:challenge_solve", challenge_id=challenge.id)
 
 
 @require_http_methods(["GET", "POST"])
 def challenge_solve(request, challenge_id):
     if not _is_challenge_portal_enabled():
-        messages.warning(request, "Le module Challenges est actuellement désactivé par l'administration.")
+        messages.warning(request, "Le module Challenges est actuellement d?sactiv? par l'administration.")
         return redirect("inscription:home")
 
     candidat = _get_challenge_candidate(request)
@@ -672,31 +672,50 @@ def challenge_solve(request, challenge_id):
 
     Challenge.expire_outdated()
     challenge = get_object_or_404(Challenge, pk=challenge_id, is_published=True, published_until__gte=timezone.now())
-    if not challenge.challenge_pdf:
-        messages.warning(request, "Le PDF de ce challenge n'est plus disponible.")
+    questions = list(challenge.questions.all())
+    if not questions:
+        messages.warning(request, "Ce challenge n'a pas de QCM configur?.")
         return redirect("inscription:challenges_portal")
+
     submission = ChallengeSubmission.objects.filter(challenge=challenge, candidat=candidat).first()
     if not submission:
-        messages.info(request, "Veuillez démarrer le challenge avant de répondre.")
+        messages.info(request, "Veuillez d?marrer le challenge avant de r?pondre.")
         return redirect("inscription:challenges_portal")
     if submission.is_submitted:
-        messages.info(request, "Ce challenge est déjà soumis.")
+        messages.info(request, "Ce challenge est d?j? soumis.")
         return redirect("inscription:challenges_portal")
 
     remaining_seconds = max(0, int((challenge.published_until - timezone.now()).total_seconds()))
     if remaining_seconds == 0:
-        messages.warning(request, "La fenêtre de validité de ce challenge a expiré.")
+        messages.warning(request, "La fen?tre de validit? de ce challenge a expir?.")
         return redirect("inscription:challenges_portal")
 
     elapsed_live = max(0, int((timezone.now() - submission.started_at).total_seconds()))
 
-    form = ChallengeSubmissionForm(request.POST or None, request.FILES or None)
+    form = ChallengeQCMForm(challenge, request.POST or None)
     if request.method == "POST" and form.is_valid():
-        submission.answer_text = form.cleaned_data["answer_text"]
-        submission.answer_file = form.cleaned_data.get("answer_file")
+        answers = {}
+        correct_count = 0
+        for question in questions:
+            field_name = f"question_{question.id}"
+            user_answer = form.cleaned_data.get(field_name)
+            is_correct = user_answer == question.correct_option
+            if is_correct:
+                correct_count += 1
+            answers[str(question.id)] = {
+                "question": question.question,
+                "reponse_utilisateur": user_answer,
+                "bonne_reponse": question.correct_option,
+                "correcte": is_correct,
+            }
+
+        total_questions = len(questions) or 1
+        score_on_20 = round((correct_count / total_questions) * 20, 2)
+        submission.answers_json = answers
+        submission.score = score_on_20
         submission.finalize_submission()
         submission.save()
-        messages.success(request, "Challenge soumis avec succès. Le jury publiera le score après correction.")
+        messages.success(request, f"Challenge soumis avec succ?s. Score obtenu: {score_on_20}/20.")
         return redirect("inscription:challenges_portal")
 
     return render(
@@ -707,6 +726,13 @@ def challenge_solve(request, challenge_id):
             "challenge": challenge,
             "submission": submission,
             "form": form,
+            "qcm_items": [
+                {
+                    "question": question,
+                    "field": form[f"question_{question.id}"],
+                }
+                for question in questions
+            ],
             "elapsed_live": _format_duration(elapsed_live),
             "remaining_label": f"{remaining_seconds // 3600:02d}h {(remaining_seconds % 3600) // 60:02d}min",
         },

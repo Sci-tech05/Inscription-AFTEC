@@ -10,6 +10,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from .challenges_data import CHALLENGE_QCM_DATA
+
 
 def validate_file_size(file_obj):
     max_size = 5 * 1024 * 1024
@@ -286,11 +288,6 @@ class Challenge(models.Model):
     sequence_day = models.PositiveSmallIntegerField(choices=DAY_CHOICES, unique=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    challenge_pdf = models.FileField(
-        upload_to="challenges/pdfs/",
-        validators=[validate_pdf_extension, validate_file_size],
-        blank=True,
-    )
     is_published = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     published_until = models.DateTimeField(null=True, blank=True)
@@ -304,24 +301,36 @@ class Challenge(models.Model):
 
     @classmethod
     def bootstrap_defaults(cls):
-        defaults_map = {
-            3: "Challenge 1 - Jour 3 : Installation Arduino IDE & Arduino UNO",
-            4: "Challenge 2 - Jour 4 : LED, PWM et bases pratiques Arduino",
-            5: "Challenge 3 - Jour 5 : Mini-projet 1 & capteurs environnementaux",
-            6: "Challenge 4 - Jour 6 : Mini-projet 2 & capteurs (approche projet)",
-            7: "Challenge 5 - Jour 7 : Buzzer, Tilt et logique d'evenements",
-            8: "Challenge 6 - Jour 8 : Boutons, RFID et servo-moteur",
-            9: "Challenge 7 - Jour 9 : Shift register, servo et orchestration",
-            10: "Challenge 8 - Jour 10 : Mini-projet LCD & microcontroleurs alternatifs",
-        }
-        for day in range(3, 11):
-            cls.objects.get_or_create(
-                sequence_day=day,
+        for item in CHALLENGE_QCM_DATA:
+            challenge, _ = cls.objects.get_or_create(
+                sequence_day=item["sequence_day"],
                 defaults={
-                    "title": defaults_map[day],
-                    "description": "Module challenge AFTEC (QCM / pratique) pour la sequence du jour.",
+                    "title": item["title"],
+                    "description": item.get("description", ""),
                 },
             )
+            if challenge.title != item["title"] or challenge.description != item.get("description", ""):
+                challenge.title = item["title"]
+                challenge.description = item.get("description", "")
+                challenge.save(update_fields=["title", "description", "updated_at"])
+
+            seen_orders = []
+            for order, question_data in enumerate(item.get("questions", []), start=1):
+                ChallengeQuestion.objects.update_or_create(
+                    challenge=challenge,
+                    order=order,
+                    defaults={
+                        "question": question_data["question"],
+                        "option_a": question_data["option_a"],
+                        "option_b": question_data["option_b"],
+                        "option_c": question_data["option_c"],
+                        "option_d": question_data["option_d"],
+                        "correct_option": question_data["correct"],
+                    },
+                )
+                seen_orders.append(order)
+            if seen_orders:
+                challenge.questions.exclude(order__in=seen_orders).delete()
 
     @classmethod
     def expire_outdated(cls):
@@ -360,18 +369,13 @@ class ChallengeSubmission(models.Model):
     started_at = models.DateTimeField(default=timezone.now)
     submitted_at = models.DateTimeField(null=True, blank=True)
     elapsed_seconds = models.PositiveIntegerField(default=0)
-    answer_text = models.TextField(blank=True)
-    answer_file = models.FileField(
-        upload_to="challenges/reponses/",
-        blank=True,
-        validators=[validate_file_extension, validate_file_size],
-    )
+    answers_json = models.JSONField(default=dict, blank=True)
     score = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         null=True,
         blank=True,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        validators=[MinValueValidator(0), MaxValueValidator(20)],
     )
     jury_comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -394,6 +398,29 @@ class ChallengeSubmission(models.Model):
 
     def __str__(self):
         return f"{self.candidat.nom_complet} | Jour {self.challenge.sequence_day}"
+
+
+class ChallengeQuestion(models.Model):
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="questions")
+    order = models.PositiveIntegerField()
+    question = models.TextField()
+    option_a = models.CharField(max_length=255)
+    option_b = models.CharField(max_length=255)
+    option_c = models.CharField(max_length=255)
+    option_d = models.CharField(max_length=255)
+    correct_option = models.CharField(
+        max_length=1,
+        choices=(("A", "A"), ("B", "B"), ("C", "C"), ("D", "D")),
+    )
+
+    class Meta:
+        ordering = ("order",)
+        unique_together = ("challenge", "order")
+        verbose_name = "Question challenge"
+        verbose_name_plural = "Questions challenges"
+
+    def __str__(self):
+        return f"Jour {self.challenge.sequence_day} Q{self.order}"
 
 
 class StatutCandidat(models.Model):

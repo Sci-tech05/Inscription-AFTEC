@@ -11,6 +11,7 @@
         <article class="aftec-module-app">
           <h3>{{ app.name }}</h3>
           {% for model in app.models %}
+            {% if model.object_name != "Consentement" and model.object_name != "NotesAcademiques" and model.object_name != "ChallengePortalSettings" %}
             <div class="aftec-module-row">
               {% if model.admin_url %}
                 <a class="aftec-module-name" href="{{ model.admin_url }}">
@@ -27,6 +28,7 @@
                 {% if model.admin_url and not model.view_only %}<a href="{{ model.admin_url }}">Modifier</a>{% endif %}
               </div>
             </div>
+            {% endif %}
           {% endfor %}
         </article>
       {% endfor %}

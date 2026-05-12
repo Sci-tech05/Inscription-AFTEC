@@ -57,7 +57,7 @@
           <tr>
             <th>Jour</th>
             <th>Titre</th>
-            <th>PDF</th>
+            <th>Questions</th>
             <th>Statut</th>
             <th>Actions</th>
           </tr>
@@ -71,10 +71,10 @@
                 <small style="color:#5d6d82;">{{ challenge.description }}</small>
               </td>
               <td>
-                {% if challenge.challenge_pdf %}
-                  <a href="{{ challenge.challenge_pdf.url }}" target="_blank">Voir PDF</a>
+                {% if challenge.questions.count %}
+                  <strong>{{ challenge.questions.count }}</strong> QCM
                 {% else %}
-                  <span style="color:#b33656;">Non ajouté</span>
+                  <span style="color:#b33656;">Non configures</span>
                 {% endif %}
               </td>
               <td>
@@ -137,7 +137,7 @@
                       <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ row.nom }}</td>
-                        <td>{{ row.score }}</td>
+                        <td>{{ row.score }}/20</td>
                         <td>{{ row.temps }}</td>
                       </tr>
                     {% endfor %}

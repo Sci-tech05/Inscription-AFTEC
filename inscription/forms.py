@@ -5,7 +5,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Candidat, NotesAcademiques, QuizQuestion, validate_file_extension, validate_file_size
+from .models import Candidat, Challenge, NotesAcademiques, QuizQuestion
 
 
 class DateInput(forms.DateInput):
@@ -321,25 +321,22 @@ class ChallengeLoginForm(forms.Form):
             field.widget.attrs.setdefault("class", "form-control")
 
 
-class ChallengeSubmissionForm(forms.Form):
-    answer_text = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 7, "placeholder": "Saisissez votre réponse ou approche ici..."}),
-        label="Votre réponse",
-    )
-    answer_file = forms.FileField(
-        required=False,
-        label="Pièce jointe (facultative : PDF/JPG/PNG)",
-        validators=[validate_file_extension, validate_file_size],
-    )
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if not cleaned_data.get("answer_text") and not cleaned_data.get("answer_file"):
-            raise ValidationError("Ajoutez au moins une réponse texte ou un fichier.")
-        return cleaned_data
-
-    def __init__(self, *args, **kwargs):
+class ChallengeQCMForm(forms.Form):
+    def __init__(self, challenge: Challenge, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["answer_text"].widget.attrs.setdefault("class", "form-control")
-        self.fields["answer_file"].widget.attrs.setdefault("class", "form-control")
+        self.challenge = challenge
+        self.questions = list(challenge.questions.all())
+        for question in self.questions:
+            field_name = f"question_{question.id}"
+            self.fields[field_name] = forms.ChoiceField(
+                label=question.question,
+                choices=(
+                    ("A", question.option_a),
+                    ("B", question.option_b),
+                    ("C", question.option_c),
+                    ("D", question.option_d),
+                ),
+                widget=forms.RadioSelect,
+                required=True,
+            )
+            self.fields[field_name].widget.attrs.setdefault("class", "quiz-radio-input")

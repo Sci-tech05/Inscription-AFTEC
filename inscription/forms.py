@@ -5,6 +5,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 
+from .challenges_data import strip_answer_markers
 from .models import Candidat, Challenge, NotesAcademiques, QuizQuestion
 
 
@@ -331,10 +332,10 @@ class ChallengeQCMForm(forms.Form):
             self.fields[field_name] = forms.ChoiceField(
                 label=question.question,
                 choices=(
-                    ("A", question.option_a),
-                    ("B", question.option_b),
-                    ("C", question.option_c),
-                    ("D", question.option_d),
+                    ("A", strip_answer_markers(question.option_a)),
+                    ("B", strip_answer_markers(question.option_b)),
+                    ("C", strip_answer_markers(question.option_c)),
+                    ("D", strip_answer_markers(question.option_d)),
                 ),
                 widget=forms.RadioSelect,
                 required=True,

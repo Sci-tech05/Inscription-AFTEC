@@ -10,7 +10,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from .challenges_data import CHALLENGE_QCM_DATA
+from .challenges_data import (
+    CHALLENGE_QCM_DATA,
+    OPTION_FIELDS,
+    normalize_question_payload,
+    option_has_answer_marker,
+    strip_answer_markers,
+)
 
 
 def validate_file_size(file_obj):
@@ -300,37 +306,72 @@ class Challenge(models.Model):
         verbose_name_plural = "Challenges"
 
     @classmethod
-    def bootstrap_defaults(cls):
+    def bootstrap_defaults(cls, overwrite_existing=False):
         for item in CHALLENGE_QCM_DATA:
-            challenge, _ = cls.objects.get_or_create(
+            challenge, created = cls.objects.get_or_create(
                 sequence_day=item["sequence_day"],
                 defaults={
                     "title": item["title"],
                     "description": item.get("description", ""),
                 },
             )
-            if challenge.title != item["title"] or challenge.description != item.get("description", ""):
+            if overwrite_existing and not created and (
+                challenge.title != item["title"] or challenge.description != item.get("description", "")
+            ):
                 challenge.title = item["title"]
                 challenge.description = item.get("description", "")
                 challenge.save(update_fields=["title", "description", "updated_at"])
 
             seen_orders = []
             for order, question_data in enumerate(item.get("questions", []), start=1):
-                ChallengeQuestion.objects.update_or_create(
+                normalized_question = normalize_question_payload(question_data)
+                defaults = {
+                    "question": normalized_question["question"],
+                    "option_a": normalized_question["option_a"],
+                    "option_b": normalized_question["option_b"],
+                    "option_c": normalized_question["option_c"],
+                    "option_d": normalized_question["option_d"],
+                    "correct_option": normalized_question["correct"],
+                }
+                challenge_question, question_created = ChallengeQuestion.objects.get_or_create(
                     challenge=challenge,
                     order=order,
-                    defaults={
-                        "question": question_data["question"],
-                        "option_a": question_data["option_a"],
-                        "option_b": question_data["option_b"],
-                        "option_c": question_data["option_c"],
-                        "option_d": question_data["option_d"],
-                        "correct_option": question_data["correct"],
-                    },
+                    defaults=defaults,
                 )
+                if overwrite_existing and not question_created:
+                    update_fields = []
+                    for field_name, field_value in defaults.items():
+                        if getattr(challenge_question, field_name) != field_value:
+                            setattr(challenge_question, field_name, field_value)
+                            update_fields.append(field_name)
+                    if update_fields:
+                        challenge_question.save(update_fields=update_fields)
                 seen_orders.append(order)
-            if seen_orders:
+            if overwrite_existing and seen_orders:
                 challenge.questions.exclude(order__in=seen_orders).delete()
+
+        cls.normalize_question_bank()
+
+    @classmethod
+    def normalize_question_bank(cls):
+        for question in ChallengeQuestion.objects.all():
+            update_fields = []
+            marked_options = []
+            for option_key, field_name in OPTION_FIELDS:
+                option_value = getattr(question, field_name)
+                if option_has_answer_marker(option_value):
+                    marked_options.append(option_key)
+                cleaned_option = strip_answer_markers(option_value)
+                if cleaned_option != option_value:
+                    setattr(question, field_name, cleaned_option)
+                    update_fields.append(field_name)
+
+            if len(marked_options) == 1 and question.correct_option != marked_options[0]:
+                question.correct_option = marked_options[0]
+                update_fields.append("correct_option")
+
+            if update_fields:
+                question.save(update_fields=update_fields)
 
     @classmethod
     def expire_outdated(cls):

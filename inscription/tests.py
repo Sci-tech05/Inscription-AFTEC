@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -6,7 +7,7 @@ from django.contrib.admin.options import ModelAdmin
 from django.test import RequestFactory, TestCase
 
 from inscription.admin import CandidatAdmin, StatutCandidatAdmin, aftec_admin_site
-from inscription.models import Candidat, StatutCandidat
+from inscription.models import Candidat, NotesAcademiques, QuizReponse, StatutCandidat
 
 
 class CandidatAdminStatusEmailTests(TestCase):
@@ -82,3 +83,87 @@ class StatutCandidatAdminEmailTests(TestCase):
             self.admin.save_model(self.factory.post("/admin/"), statut, form=None, change=True)
 
         mocked_send.assert_called_once()
+
+
+class StatutCandidatScoreFormulaTests(TestCase):
+    def _create_candidat(self, email, level):
+        return Candidat.objects.create(
+            nom="Test",
+            prenom="Candidate",
+            date_naissance=date(2002, 1, 1),
+            sexe="M",
+            telephone="0100000000",
+            email=email,
+            commune_residence="Pobe",
+            etablissement="AFTEC",
+            classe_niveau=level,
+            filiere="STEM",
+        )
+
+    def test_secondary_formula(self):
+        candidat = self._create_candidat("secondary@example.com", "TLE")
+        NotesAcademiques.objects.create(
+            candidat=candidat,
+            moyenne_generale_an1=Decimal("10.00"),
+            moyenne_generale_an2=Decimal("12.00"),
+            moyenne_maths_an1=Decimal("14.00"),
+            moyenne_maths_an2=Decimal("16.00"),
+            moyenne_physique_an1=Decimal("8.00"),
+            moyenne_physique_an2=Decimal("10.00"),
+        )
+        QuizReponse.objects.create(
+            candidat=candidat,
+            score_physique=8,
+            score_mathematiques=7,
+            score_informatique=0,
+            score_ia=0,
+            score_entrepreneuriat=0,
+            score_divers=0,
+        )
+
+        statut = StatutCandidat.objects.create(
+            candidat=candidat,
+            note_motivation=Decimal("7.00"),
+        )
+        self.assertEqual(statut.score_global_selection, 65.92)
+
+    def test_licence_master_formula(self):
+        candidat = self._create_candidat("higher@example.com", "L3")
+        NotesAcademiques.objects.create(
+            candidat=candidat,
+            moyenne_generale_an1=Decimal("14.00"),
+            moyenne_generale_an2=Decimal("16.00"),
+        )
+        QuizReponse.objects.create(
+            candidat=candidat,
+            score_physique=0,
+            score_mathematiques=0,
+            score_informatique=5,
+            score_ia=4,
+            score_entrepreneuriat=5,
+            score_divers=4,
+        )
+
+        statut = StatutCandidat.objects.create(
+            candidat=candidat,
+            note_motivation=Decimal("8.00"),
+        )
+        self.assertEqual(statut.score_global_selection, 82.5)
+
+    def test_professional_formula(self):
+        candidat = self._create_candidat("pro@example.com", "AUTRE")
+        QuizReponse.objects.create(
+            candidat=candidat,
+            score_physique=0,
+            score_mathematiques=0,
+            score_informatique=3,
+            score_ia=3,
+            score_entrepreneuriat=3,
+            score_divers=3,
+        )
+
+        statut = StatutCandidat.objects.create(
+            candidat=candidat,
+            note_motivation=Decimal("9.00"),
+        )
+        self.assertEqual(statut.score_global_selection, 72.0)

@@ -275,18 +275,37 @@ class StatutCandidat(models.Model):
         notes = getattr(self.candidat, "notes", None)
         quiz = getattr(self.candidat, "quiz", None)
 
-        moyenne_maths_an2 = float(notes.moyenne_maths_an2) if notes and notes.moyenne_maths_an2 is not None else 0.0
-        moyenne_physique_an2 = float(notes.moyenne_physique_an2) if notes and notes.moyenne_physique_an2 is not None else 0.0
-        score_quiz_total = float(quiz.score_total) if quiz else 0.0
-        note_motivation = float(self.note_motivation or 0)
+        def _safe_float(value):
+            return float(value) if value is not None else 0.0
 
-        self.score_global_selection = (
-            moyenne_maths_an2 * 1
-            + moyenne_physique_an2 * 0.5
-            + score_quiz_total * 2
-            + note_motivation
-        )
-        self.score_global_selection = round(min(self.score_global_selection, 100), 2)
+        score_quiz_total = _safe_float(getattr(quiz, "score_total", 0.0))
+        note_motivation = _safe_float(self.note_motivation)
+        q_score = (score_quiz_total / 20.0) * 100.0
+        m_score = (note_motivation / 10.0) * 100.0
+        level = self.candidat.classe_niveau
+
+        if level in Candidat.SECONDARY_LEVELS:
+            academic_values = [
+                _safe_float(getattr(notes, "moyenne_generale_an1", None)),
+                _safe_float(getattr(notes, "moyenne_generale_an2", None)),
+                _safe_float(getattr(notes, "moyenne_maths_an1", None)),
+                _safe_float(getattr(notes, "moyenne_maths_an2", None)),
+                _safe_float(getattr(notes, "moyenne_physique_an1", None)),
+                _safe_float(getattr(notes, "moyenne_physique_an2", None)),
+            ]
+            a_score = (sum(academic_values) / 6.0) / 20.0 * 100.0
+            score_global = 0.50 * a_score + 0.35 * q_score + 0.15 * m_score
+        elif level in {"L1", "L2", "L3", "M1", "M2"}:
+            academic_values = [
+                _safe_float(getattr(notes, "moyenne_generale_an1", None)),
+                _safe_float(getattr(notes, "moyenne_generale_an2", None)),
+            ]
+            a_score = (sum(academic_values) / 2.0) / 20.0 * 100.0
+            score_global = 0.40 * a_score + 0.45 * q_score + 0.15 * m_score
+        else:
+            score_global = 0.60 * q_score + 0.40 * m_score
+
+        self.score_global_selection = round(max(0.0, min(score_global, 100.0)), 2)
         super().save(*args, **kwargs)
 
     def __str__(self):

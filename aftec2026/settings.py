@@ -25,6 +25,9 @@ ALLOWED_HOSTS = config(
     default='aftec.pythonanywhere.com,www.aftec.pythonanywhere.com,127.0.0.1,localhost',
     cast=lambda v: [host.strip() for host in v.split(',') if host.strip()]
 )
+for required_host in ('aftec.pythonanywhere.com', 'www.aftec.pythonanywhere.com'):
+    if required_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(required_host)
 
 CSRF_TRUSTED_ORIGINS = [
     'https://aftec.pythonanywhere.com',

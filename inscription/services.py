@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+from smtplib import SMTPAuthenticationError
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 
@@ -72,4 +74,11 @@ def send_decision_email(candidat, statut_code: str, commentaire: str = ""):
         to=[candidat.email],
     )
     msg.attach_alternative(html_body, "text/html")
-    msg.send(fail_silently=False)
+    try:
+        msg.send(fail_silently=False)
+    except SMTPAuthenticationError as exc:
+        raise RuntimeError(
+            "Authentification SMTP refusee (535). "
+            "Utilisez un mot de passe d'application Google (16 caracteres) "
+            "et activez la validation en 2 etapes sur le compte expediteur."
+        ) from exc

@@ -1,42 +1,52 @@
 import os
 from pathlib import Path
-from decouple import config
+from decouple import config, Config, RepositoryEnv
 
+# ====================== BASE ======================
 BASE_DIR = Path(__file__).resolve().parent.parent
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Static files
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# Force le chargement du .env (sécurité pour PythonAnywhere)
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    config = Config(RepositoryEnv(env_file))
 
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',          # ton dossier static principal
-]
-
-# Pour la production 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-def env_bool(name, default):
+# ====================== FONCTIONS UTILITAIRES ======================
+def env_bool(name, default=False):
     value = str(config(name, default=str(default))).strip().lower()
-    return value in {'1', 'true', 'yes', 'on'}
+    return value in {'1', 'true', 'yes', 'on', 'y'}
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
+# ====================== SECURITY ======================
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-CHANGE_ME_PLEASE_2026')
+
 DEBUG = env_bool('DEBUG', False)
+
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='127.0.0.1,localhost',
+    default='aftec.pythonanywhere.com,www.aftec.pythonanywhere.com,127.0.0.1,localhost',
     cast=lambda v: [host.strip() for host in v.split(',') if host.strip()]
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://inscription-aftec-2026.onrender.com',
+    'https://aftec.pythonanywhere.com',
+    'https://www.aftec.pythonanywhere.com',
 ]
 
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True
+
+CSRF_COOKIE_SECURE = False      # ← Change en False pour l'instant
+SESSION_COOKIE_SECURE = False   # ← Change en False pour l'instant
+SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# ====================== STATIC & MEDIA ======================
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# ====================== APPLICATIONS ======================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -100,13 +110,6 @@ TIME_ZONE = 'Africa/Porto-Novo'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
@@ -127,12 +130,20 @@ KCOMAT_INFO = {
     'maps_embed': 'https://maps.app.goo.gl/UXMLViYtf7Sjm6267',
 }
 
+# ====================== EMAIL ======================
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
 EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='kcomat0@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='kcomat0@gmail.com').strip()
+EMAIL_HOST_PASSWORD = config(
+    'EMAIL_HOST_PASSWORD',
+    default=config('EMAIL_APP_PASSWORD', default='')
+)
+# Gmail fournit un mot de passe d'application de 16 caracteres souvent affiche avec des espaces.
+# On le normalise pour eviter les erreurs d'authentification SMTP 535.
+if str(EMAIL_HOST).strip().lower() == 'smtp.gmail.com':
+    EMAIL_HOST_PASSWORD = str(EMAIL_HOST_PASSWORD).replace(' ', '').strip()
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='KcoMat <kcomat0@gmail.com>')

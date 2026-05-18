@@ -1,6 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+from errno import ENETDOWN, ENETUNREACH, EHOSTUNREACH
 from smtplib import SMTPAuthenticationError
+from socket import timeout as SocketTimeout
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -81,4 +83,16 @@ def send_decision_email(candidat, statut_code: str, commentaire: str = ""):
             "Authentification SMTP refusee (535). "
             "Utilisez un mot de passe d'application Google (16 caracteres) "
             "et activez la validation en 2 etapes sur le compte expediteur."
+        ) from exc
+    except (OSError, SocketTimeout) as exc:
+        if getattr(exc, "errno", None) in {ENETUNREACH, EHOSTUNREACH, ENETDOWN}:
+            raise RuntimeError(
+                "Reseau SMTP inaccessible. Le serveur ne peut pas joindre "
+                f"{settings.EMAIL_HOST}:{settings.EMAIL_PORT}. "
+                "Verifiez la connectivite sortante de l'hebergeur "
+                "(pare-feu/restrictions SMTP) ou basculez vers un service email HTTP (Mailgun/SendGrid)."
+            ) from exc
+        raise RuntimeError(
+            "Echec de connexion au serveur SMTP. "
+            "Verifiez EMAIL_HOST, EMAIL_PORT, TLS/SSL et la disponibilite reseau."
         ) from exc

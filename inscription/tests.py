@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from errno import ENETUNREACH
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -16,6 +17,7 @@ from inscription.models import (
     QuizReponse,
     StatutCandidat,
 )
+from inscription.services import send_decision_email
 
 
 class CandidatAdminStatusEmailTests(TestCase):
@@ -91,6 +93,31 @@ class StatutCandidatAdminEmailTests(TestCase):
             self.admin.save_model(self.factory.post("/admin/"), statut, form=None, change=True)
 
         mocked_send.assert_called_once()
+
+
+class SendDecisionEmailServiceTests(TestCase):
+    def test_send_decision_email_reports_network_unreachable_with_actionable_message(self):
+        candidat = Candidat.objects.create(
+            nom="Net",
+            prenom="Issue",
+            date_naissance=date(2004, 1, 1),
+            sexe="F",
+            telephone="0102030405",
+            email="network.issue@example.com",
+            commune_residence="Pobe",
+            etablissement="Lycee Test",
+            classe_niveau="TLE",
+            filiere="Scientifique",
+        )
+
+        with patch(
+            "inscription.services.EmailMultiAlternatives.send",
+            side_effect=OSError(ENETUNREACH, "Network is unreachable"),
+        ):
+            with self.assertRaises(RuntimeError) as context:
+                send_decision_email(candidat, "RETENU")
+
+        self.assertIn("Reseau SMTP inaccessible", str(context.exception))
 
 
 class StatutCandidatScoreFormulaTests(TestCase):

@@ -8,7 +8,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Force le chargement du .env (sécurité pour PythonAnywhere)
 env_file = BASE_DIR / '.env'
 if env_file.exists():
-    config = Config(RepositoryEnv(env_file))
+    file_config = Config(RepositoryEnv(env_file))
+
+    def config(name, default=None, cast=str):  # type: ignore[no-redef]
+        """
+        Priorite: variables d'environnement systeme, puis .env.
+        Utile pour PythonAnywhere (Web tab -> Environment variables).
+        """
+        env_value = os.environ.get(name)
+        if env_value is not None and str(env_value).strip() != "":
+            if cast is None:
+                return env_value
+            return cast(env_value)
+        return file_config(name, default=default, cast=cast)
 
 # ====================== FONCTIONS UTILITAIRES ======================
 def env_bool(name, default=False):

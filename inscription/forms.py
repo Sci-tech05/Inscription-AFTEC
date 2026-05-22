@@ -94,8 +94,6 @@ class InscriptionMultiStepForm(forms.Form):
 
     # Etape 5 : Documents
     piece_identite = forms.FileField(required=True)
-    bulletin_an1 = forms.FileField(required=False, label="Bulletin Année passée")
-    bulletin_an2 = forms.FileField(required=False, label="Bulletin S1 année actuelle")
     lettre_recommandation = forms.FileField(required=False, label="Lettre recommandation (facultative)")
     autorisation_parentale = forms.FileField(required=False)
     quiz_elapsed_seconds = forms.IntegerField(required=False, min_value=0, initial=0, widget=forms.HiddenInput())
@@ -212,8 +210,6 @@ class InscriptionMultiStepForm(forms.Form):
             ]:
                 cleaned_data[field_name] = None
 
-            cleaned_data["bulletin_an1"] = None
-            cleaned_data["bulletin_an2"] = None
         elif classe_niveau in self.HIGHER_LEVEL_CLASSES:
             required_general_scores = [
                 "moyenne_generale_an1",
@@ -249,12 +245,6 @@ class InscriptionMultiStepForm(forms.Form):
             for field_name in required_scores:
                 if cleaned_data.get(field_name) is None:
                     self.add_error(field_name, "Cette moyenne est obligatoire pour ce niveau.")
-
-        if not is_professional:
-            if not cleaned_data.get("bulletin_an1"):
-                self.add_error("bulletin_an1", "Ce document est obligatoire pour ce niveau.")
-            if not cleaned_data.get("bulletin_an2"):
-                self.add_error("bulletin_an2", "Ce document est obligatoire pour ce niveau.")
 
         if date_naissance:
             is_minor = self._age(date_naissance) < 18

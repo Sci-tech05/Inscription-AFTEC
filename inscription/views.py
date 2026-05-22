@@ -179,8 +179,6 @@ def formulaire_inscription(request):
                 Documents.objects.create(
                     candidat=candidat,
                     piece_identite=form.cleaned_data["piece_identite"],
-                    bulletin_an1=form.cleaned_data.get("bulletin_an1"),
-                    bulletin_an2=form.cleaned_data.get("bulletin_an2"),
                     lettre_motivation=form.cleaned_data["lettre_motivation"],
                     lettre_recommandation=form.cleaned_data.get("lettre_recommandation"),
                     attestation_diplome=form.cleaned_data.get("attestation_diplome"),
@@ -454,13 +452,6 @@ def confirmation_pdf(request, candidat_id):
             [
                 ["Attestation du diplôme", _doc_or_dash(getattr(documents, "attestation_diplome", None))],
                 ["Dernier relevé de notes", _doc_or_dash(getattr(documents, "dernier_releve_notes", None))],
-            ]
-        )
-    else:
-        documents_data.extend(
-            [
-                ["Bulletin Année passée", _doc_or_dash(getattr(documents, "bulletin_an1", None))],
-                ["Bulletin S1 année actuelle", _doc_or_dash(getattr(documents, "bulletin_an2", None))],
             ]
         )
     documents_data.append(["Lettre recommandation (facultative)", _doc_or_dash(getattr(documents, "lettre_recommandation", None))])

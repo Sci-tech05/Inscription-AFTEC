@@ -151,8 +151,6 @@ class NotesAcademiques(models.Model):
 class Documents(models.Model):
     candidat = models.OneToOneField(Candidat, on_delete=models.CASCADE, related_name="documents")
     piece_identite = models.FileField(upload_to="documents/pieces/", validators=[validate_file_extension, validate_file_size])
-    bulletin_an1 = models.FileField(upload_to="documents/bulletins/", blank=True, validators=[validate_file_extension, validate_file_size])
-    bulletin_an2 = models.FileField(upload_to="documents/bulletins/", blank=True, validators=[validate_file_extension, validate_file_size])
     lettre_motivation = models.FileField(upload_to="documents/motivation/", validators=[validate_file_extension, validate_file_size])
     lettre_recommandation = models.FileField(upload_to="documents/recommandation/", blank=True, validators=[validate_file_extension, validate_file_size])
     attestation_diplome = models.FileField(upload_to="documents/diplomes/", blank=True, validators=[validate_file_extension, validate_file_size])
@@ -167,12 +165,6 @@ class Documents(models.Model):
                 errors["attestation_diplome"] = "Ce document est obligatoire pour les professionnels."
             if not self.dernier_releve_notes:
                 errors["dernier_releve_notes"] = "Ce document est obligatoire pour les professionnels."
-        else:
-            if not self.bulletin_an1:
-                errors["bulletin_an1"] = "Ce bulletin est obligatoire pour ce niveau."
-            if not self.bulletin_an2:
-                errors["bulletin_an2"] = "Ce bulletin est obligatoire pour ce niveau."
-
         if self.candidat.est_mineur and not self.autorisation_parentale:
             errors["autorisation_parentale"] = "Une autorisation parentale est obligatoire pour les mineurs."
 

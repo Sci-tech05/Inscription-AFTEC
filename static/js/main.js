@@ -131,12 +131,9 @@
     const academicGeneralBlocks = Array.from(document.querySelectorAll('.academic-general'));
     const optionalMathPhysicsBlocks = Array.from(document.querySelectorAll('.optional-math-physics'));
     const professionalBlocks = Array.from(document.querySelectorAll('.professional-only'));
-    const professionalBulletinBlocks = Array.from(document.querySelectorAll('.professional-bulletin'));
     const diplomeSelect = document.getElementById('id_diplome_plus_eleve');
     const attestationDiplomeInput = document.getElementById('id_attestation_diplome');
     const dernierReleveInput = document.getElementById('id_dernier_releve_notes');
-    const bulletinAn1Input = document.getElementById('id_bulletin_an1');
-    const bulletinAn2Input = document.getElementById('id_bulletin_an2');
     const quizPane = document.querySelector('.step-pane[data-step="6"]');
     const quizTabButtons = Array.from(document.querySelectorAll('#quizTabs button[data-bs-target]'));
     const quizTabPanes = Array.from(document.querySelectorAll('.step-pane[data-step="6"] .tab-content .tab-pane'));
@@ -245,18 +242,6 @@
         }
         if (dernierReleveInput) {
             dernierReleveInput.required = isProfessional;
-        }
-
-        professionalBulletinBlocks.forEach((block) => {
-            block.classList.toggle('d-none', isProfessional);
-        });
-        if (bulletinAn1Input) {
-            bulletinAn1Input.required = !isProfessional;
-            bulletinAn1Input.disabled = isProfessional;
-        }
-        if (bulletinAn2Input) {
-            bulletinAn2Input.required = !isProfessional;
-            bulletinAn2Input.disabled = isProfessional;
         }
 
         if (higherLevelHint) {

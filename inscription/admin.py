@@ -88,8 +88,6 @@ class DocumentsInline(admin.StackedInline):
     verbose_name_plural = "Documents"
     readonly_fields = (
         "piece_identite_link",
-        "bulletin_an1_link",
-        "bulletin_an2_link",
         "lettre_motivation_link",
         "lettre_recommandation_link",
         "attestation_diplome_link",
@@ -100,10 +98,6 @@ class DocumentsInline(admin.StackedInline):
     fields = (
         "piece_identite",
         "piece_identite_link",
-        "bulletin_an1",
-        "bulletin_an1_link",
-        "bulletin_an2",
-        "bulletin_an2_link",
         "lettre_motivation",
         "lettre_motivation_link",
         "lettre_recommandation",
@@ -124,12 +118,6 @@ class DocumentsInline(admin.StackedInline):
 
     def piece_identite_link(self, obj):
         return self._file_link(obj.piece_identite)
-
-    def bulletin_an1_link(self, obj):
-        return self._file_link(obj.bulletin_an1)
-
-    def bulletin_an2_link(self, obj):
-        return self._file_link(obj.bulletin_an2)
 
     def lettre_motivation_link(self, obj):
         return self._file_link(obj.lettre_motivation)

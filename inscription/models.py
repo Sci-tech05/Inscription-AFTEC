@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .challenges_data import (
@@ -78,6 +79,13 @@ class Candidat(models.Model):
 
     class Meta:
         ordering = ("-date_inscription",)
+        constraints = [
+            models.UniqueConstraint(
+                Lower("nom"),
+                Lower("prenom"),
+                name="uniq_candidat_nom_prenom_ci",
+            )
+        ]
 
     def __str__(self):
         return f"{self.prenom} {self.nom}".strip()

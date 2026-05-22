@@ -165,6 +165,14 @@ class InscriptionMultiStepForm(forms.Form):
             raise ValidationError("Une candidature existe déjà avec cette adresse email.")
         return email
 
+    def clean_nom(self):
+        nom = " ".join((self.cleaned_data.get("nom") or "").split())
+        return nom
+
+    def clean_prenom(self):
+        prenom = " ".join((self.cleaned_data.get("prenom") or "").split())
+        return prenom
+
     def clean_date_naissance(self):
         birth_date = self.cleaned_data["date_naissance"]
         if self._age(birth_date) < 14:
@@ -176,6 +184,12 @@ class InscriptionMultiStepForm(forms.Form):
 
         date_naissance = cleaned_data.get("date_naissance")
         classe_niveau = cleaned_data.get("classe_niveau")
+        nom = cleaned_data.get("nom")
+        prenom = cleaned_data.get("prenom")
+
+        if nom and prenom and Candidat.objects.filter(nom__iexact=nom, prenom__iexact=prenom).exists():
+            self.add_error("nom", "Une candidature existe déjà pour ce nom et prénom.")
+            self.add_error("prenom", "Une candidature existe déjà pour ce nom et prénom.")
 
         required_consents = [
             "consent_donnees_personnelles",

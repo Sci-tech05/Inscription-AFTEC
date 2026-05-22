@@ -9,7 +9,3 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Environment secrets
-.env
-.env.*
-!.env.example
